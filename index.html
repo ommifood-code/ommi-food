@@ -3,76 +3,110 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="description" content="Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك. وجبات مغربية أصيلة من مطابخ الأمهات."/>
-<meta property="og:title" content="Ommi Food — أمّي فود"/>
+<meta name="description" content="Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك"/>
+<meta property="og:title" content="Ommi Food"/>
 <meta property="og:description" content="من مطبخ أمهاتنا إلى قلب بيتك"/>
 <meta property="og:url" content="https://ommifood.com"/>
-<meta name="theme-color" content="#C0392B"/>
-<title>Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك</title>
+<meta name="theme-color" content="#B03A2E"/>
+<title>Ommi Food</title>
 <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
+<!-- LOADER -->
 <div id="loader">
   <div class="loader-logo">Ommi Food</div>
   <div class="loader-dots"><span></span><span></span><span></span></div>
 </div>
 
-<!-- PAGE: HOME -->
-<div id="page-home" class="page">
-  <div class="hero-logo">
-    <div class="hero-logo-text">Ommi Food</div>
-    <div class="hero-logo-ar">أمّي فود</div>
-  </div>
-  <h1 class="hero-tagline">من مطبخ أمهاتنا إلى قلب بيتك</h1>
-  <p class="hero-tagline-fr">De la cuisine de nos mères à votre foyer</p>
-  <div class="hero-form">
-    <div class="city-label">اختر مدينتك — Choisissez votre ville</div>
-    <select class="city-select" id="city-select">
-      <option value="">— اختر المدينة —</option>
-      <option value="casablanca">الدار البيضاء — Casablanca</option>
-      <option value="rabat">الرباط — Rabat</option>
-    </select>
-    <button class="explore-btn" onclick="goToChefs()">استكشاف الطاهيات ←</button>
-  </div>
-  <div class="hero-deco">
-    <span>🫕</span><span>🍲</span><span>🥘</span><span>🫖</span><span>🥐</span>
+<!-- MODAL COMMANDE -->
+<div id="order-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()" aria-label="إغلاق">✕</button>
+    <div class="modal-dish-name" id="modal-dish-name"></div>
+    <h2 class="modal-title" id="modal-title">تفاصيل طلبك</h2>
+    <p class="modal-sub">سيصل طلبك مباشرة إلى الطاهية عبر WhatsApp</p>
+
+    <div class="form-field">
+      <label class="form-label" for="inp-name">الاسم الكامل *</label>
+      <input class="form-input" type="text" id="inp-name" placeholder="محمد أو فاطمة..."/>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="inp-phone">رقم الهاتف *</label>
+      <input class="form-input" type="tel" id="inp-phone" placeholder="+212 6XX XXX XXX" dir="ltr"/>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="inp-address">الحي أو العنوان *</label>
+      <input class="form-input" type="text" id="inp-address" placeholder="الحي، الشارع..."/>
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="inp-notes">ملاحظات إضافية</label>
+      <textarea class="form-input form-textarea" id="inp-notes" placeholder="حساسية، كمية، وقت التسليم..."></textarea>
+    </div>
+
+    <div class="modal-error" id="modal-error"></div>
+
+    <button class="confirm-btn" onclick="confirmOrder()">
+      <span>💬</span> تأكيد الطلب عبر WhatsApp
+    </button>
   </div>
 </div>
 
-<!-- PAGE: CHEFS LIST -->
-<div id="page-chefs" class="page">
-  <div class="top-bar">
-    <button class="back-btn" onclick="showPage('home')">←</button>
-    <div class="top-bar-info">
-      <div class="top-bar-title">الطاهيات المتاحات</div>
-      <div class="top-bar-sub" id="chefs-city-label">—</div>
+<!-- PAGE: HOME -->
+<div id="page-home" class="page">
+  <div class="home-inner">
+    <div class="home-logo">
+      <div class="logo-text">Ommi Food</div>
+      <div class="logo-ar">أمّي فود</div>
     </div>
-    <div class="top-bar-brand">Ommi Food</div>
+    <h1 class="home-tagline">من مطبخ أمهاتنا<br/>إلى قلب بيتك</h1>
+    <p class="home-tagline-fr">De la cuisine de nos mères à votre foyer</p>
+    <div class="home-form">
+      <label class="city-label" for="city-select">اختر مدينتك</label>
+      <select class="city-select" id="city-select">
+        <option value="">— اختر المدينة —</option>
+        <option value="casablanca">الدار البيضاء — Casablanca</option>
+        <option value="rabat">الرباط — Rabat</option>
+      </select>
+      <button class="explore-btn" onclick="goToChefs()">استكشاف المطابخ</button>
+    </div>
+    <div class="home-deco">🫕 🍲 🥘 🫖 🥐</div>
+  </div>
+</div>
+
+<!-- PAGE: CHEFS -->
+<div id="page-chefs" class="page">
+  <div class="topbar">
+    <button class="back-btn" onclick="showPage('home')" aria-label="رجوع">←</button>
+    <div class="topbar-info">
+      <div class="topbar-title">المطابخ المنزلية</div>
+      <div class="topbar-sub" id="chefs-city-label"></div>
+    </div>
+    <div class="topbar-brand">Ommi Food</div>
   </div>
   <div class="page-body">
-    <div class="city-pill" id="city-pill">📍</div>
+    <div class="city-pill" id="city-pill"></div>
     <div id="chefs-list"></div>
   </div>
 </div>
 
-<!-- PAGE: CHEF DETAIL -->
+<!-- PAGE: DETAIL -->
 <div id="page-detail" class="page">
-  <div class="top-bar">
-    <button class="back-btn" onclick="showPage('chefs')">←</button>
-    <div class="top-bar-info">
-      <div class="top-bar-title" id="detail-topbar-name">ملف الطاهية</div>
+  <div class="topbar">
+    <button class="back-btn" onclick="showPage('chefs')" aria-label="رجوع">←</button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="detail-topbar-name">ملف المطبخ</div>
     </div>
-    <div class="top-bar-brand">Ommi Food</div>
+    <div class="topbar-brand">Ommi Food</div>
   </div>
 
   <div class="chef-hero">
     <div class="chef-hero-avatar" id="d-avatar">👩‍🍳</div>
     <div class="chef-hero-prefix" id="d-prefix">أمّي</div>
-    <div class="chef-hero-name" id="d-name">—</div>
-    <div class="chef-hero-loc" id="d-loc">📍 —</div>
-    <div class="chef-hero-stars" id="d-stars">★★★★★</div>
-    <div class="chef-hero-status" id="d-status-badge">متاحة الآن</div>
+    <div class="chef-hero-name" id="d-name"></div>
+    <div class="chef-hero-loc" id="d-loc"></div>
+    <div class="chef-hero-stars" id="d-stars"></div>
+    <span class="chef-hero-status" id="d-status"></span>
   </div>
 
   <div class="page-body">
@@ -80,12 +114,9 @@
     <div class="section-label">قائمة الأطباق</div>
     <div id="d-dishes"></div>
     <div class="contact-box">
-      <div class="contact-box-title">📞 تواصل مع الطاهية</div>
-      <button class="btn-whatsapp" onclick="openWhatsApp()">
-        <span>💬</span> طلب عبر WhatsApp
-      </button>
-      <button class="btn-phone" onclick="callChef()">
-        <span>📞</span> <span id="d-phone-label">اتصل مباشرة</span>
+      <div class="contact-title">📞 تواصل مباشر</div>
+      <button class="btn-call" onclick="callChef()">
+        <span>📞</span> <span id="d-phone-label">اتصل بالطاهية</span>
       </button>
     </div>
   </div>
