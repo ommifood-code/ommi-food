@@ -380,3 +380,68 @@ textarea, input, select { font-family: inherit; }
   .home-form        { max-width: 380px; }
   .chef-hero        { padding: 28px 32px 30px; }
 }
+
+/* JOIN BUTTON */
+.join-btn {
+  margin-top: 16px; width: 100%; max-width: 340px;
+  padding: 13px; border: 2px dashed var(--red);
+  border-radius: var(--radius-sm); color: var(--red);
+  font-size: 14px; font-weight: 600;
+  background: transparent;
+  transition: background .15s;
+}
+.join-btn:hover { background: var(--red-light); }
+
+/* GENDER ROW */
+.gender-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gender-opt {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 11px; text-align: center; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--ink2);
+  background: var(--cream); transition: all .15s;
+}
+.gender-opt.active { border-color: var(--red); background: var(--red-light); color: var(--red); }
+
+/* CHEF PREVIEW */
+.chef-preview {
+  margin-top: 8px; background: var(--cream);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-size: 18px; font-weight: 700; color: var(--red);
+  border: 1px dashed var(--border);
+}
+
+/* FORM SELECT */
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8A8A' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+}
+
+/* MODAL SUCCESS */
+.modal-success {
+  background: var(--green-light); color: var(--green);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 13px; font-weight: 600; margin-bottom: 14px;
+}
+
+/* ORDER REF */
+.order-ref {
+  background: var(--cream); border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-size: 12px; color: var(--ink3); margin-bottom: 14px;
+  text-align: center; letter-spacing: .05em;
+}
+.order-ref strong { color: var(--red); font-size: 15px; }
+
+/* LOADING STATE */
+.loading-state {
+  text-align: center; padding: 50px 20px;
+  color: var(--ink3); font-size: 14px;
+}
+.loading-state .spin {
+  font-size: 32px; display: block;
+  margin-bottom: 12px;
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

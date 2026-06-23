@@ -1,107 +1,54 @@
 /* ============================================================
-   Ommi Food — app.js
-   لتعديل بيانات الطاهيات: عدّل مصفوفة CHEFS أدناه فقط
+   Ommi Food v3 — app.js
+   Supabase integration: chefs + orders
    ============================================================ */
 
-var CHEFS = [
-  {
-    id: 1,
-    gender: 'f',
-    name: 'فاطمة الزهراء',
-    avatar: '👩‍🍳',
-    city: 'casablanca',
-    cityLabel: 'الدار البيضاء',
-    specialty: 'كسكس — طجين — حريرة',
-    rating: 4.9,
-    available: true,
-    phone: '212600000001',
-    bio: 'أطبخ منذ أكثر من عشرين سنة. تعلمت الطبخ من والدتي رحمها الله. كسكس الجمعة وطجين الدجاج بالزيتون هما تخصصاي الأول.',
-    dishes: [
-      { name: 'كسكس بالخضر السبع',     desc: 'كسكس مغربي أصيل بالخضر الموسمية والمرق الدسم',        emoji: '🫕', price: 40 },
-      { name: 'طجين الدجاج بالزيتون',  desc: 'دجاج بلدي مع الزيتون والليمون المصفّر',               emoji: '🍲', price: 50 },
-      { name: 'حريرة مغربية',           desc: 'شوربة الحريرة التقليدية بالطماطم والعدس والكزبرة',    emoji: '🥣', price: 18 }
-    ]
-  },
-  {
-    id: 2,
-    gender: 'f',
-    name: 'خديجة البوعناني',
-    avatar: '🧕',
-    city: 'casablanca',
-    cityLabel: 'الدار البيضاء',
-    specialty: 'بسطيلة — مروزية — حلويات',
-    rating: 5.0,
-    available: false,
-    phone: '212600000002',
-    bio: 'متخصصة في أطباق المناسبات المغربية. البسطيلة بالدجاج والمروزية من أشهر ما أعدّه. أستخدم مكونات طبيعية فقط.',
-    dishes: [
-      { name: 'بسطيلة بالدجاج',   desc: 'فطيرة ورقية بحشو الدجاج واللوز والبيض والقرفة',        emoji: '🥐', price: 65 },
-      { name: 'مروزية اللحم',      desc: 'لحم الضأن المطهو ببطء مع العسل والمشمش المجفف واللوز', emoji: '🍖', price: 70 },
-      { name: 'شباكية بالعسل',     desc: 'معجنات مغربية محلاة بالعسل الطبيعي ومزينة بالسمسم',   emoji: '🍯', price: 25 }
-    ]
-  },
-  {
-    id: 3,
-    gender: 'm',
-    name: 'كريم الناصري',
-    avatar: '👨‍🍳',
-    city: 'casablanca',
-    cityLabel: 'الدار البيضاء',
-    specialty: 'كفتة — مشاوي — طجين',
-    rating: 4.7,
-    available: true,
-    phone: '212600000003',
-    bio: 'أطبخ المشاوي المغربية وأطباق اللحم منذ خمس عشرة سنة. كفتة الكشة والطجين بالبرقوق من تخصصاتي.',
-    dishes: [
-      { name: 'كفتة الكشة',               desc: 'كرات اللحم المفروم بالبهارات المغربية في صلصة الطماطم', emoji: '🍢', price: 45 },
-      { name: 'طجين الخروف بالبرقوق',      desc: 'لحم الخروف مع البرقوق والسمسم والعسل',                emoji: '🍲', price: 60 },
-      { name: 'الدجاج المشوي بالشرمولة',  desc: 'دجاج بلدي متبّل بالشرمولة المغربية ومشوي على الجمر', emoji: '🍗', price: 55 }
-    ]
-  },
-  {
-    id: 4,
-    gender: 'f',
-    name: 'مريم البقالي',
-    avatar: '👵',
-    city: 'rabat',
-    cityLabel: 'الرباط',
-    specialty: 'كسكس — رفيسة — بغرير',
-    rating: 4.8,
-    available: true,
-    phone: '212600000004',
-    bio: 'ربة بيت منذ ثلاثين سنة. أطبخ وصفات جدتي التي تعود إلى مدينة الرباط العريقة. الرفيسة وبغرير الصباح من أشهر طلباتي.',
-    dishes: [
-      { name: 'رفيسة بالدجاج والعدس',    desc: 'طبق رباطي أصيل بالفلفل والكمون وورق الحلبة',                  emoji: '🫕', price: 45 },
-      { name: 'بغرير الصباح',             desc: 'فطائر مغربية إسفنجية تُقدّم مع العسل والزبدة',               emoji: '🥞', price: 20 },
-      { name: 'كسكس بالبيض المسلوق',     desc: 'نسخة رباطية من الكسكس مع البيض والزبيب والبصل المكرمل',      emoji: '🍚', price: 40 }
-    ]
-  },
-  {
-    id: 5,
-    gender: 'm',
-    name: 'عبد الرحيم الغازي',
-    avatar: '🧔',
-    city: 'rabat',
-    cityLabel: 'الرباط',
-    specialty: 'طجين — كسكس — سلطات',
-    rating: 4.6,
-    available: false,
-    phone: '212600000005',
-    bio: 'أطبخ منذ عشر سنوات بعد أن تعلمت من والدتي. أتخصص في الطجين بكل أنواعه والسلطات المغربية المشوية.',
-    dishes: [
-      { name: 'طجين الكفتة بالبيض',      desc: 'كرات اللحم المطهوة في الطماطم مع البيض والبقدونس',           emoji: '🍳', price: 42 },
-      { name: 'سلطة الباذنجان المشوي',    desc: 'باذنجان مشوي بالثوم والكمون والكزبرة وزيت الزيتون',          emoji: '🥗', price: 22 },
-      { name: 'كسكس الجمعة',             desc: 'الكسكس التقليدي بسبع خضر وقطع اللحم والمرق',                  emoji: '🫕', price: 45 }
-    ]
-  }
+var SUPABASE_URL = 'https://qgblrockjswicegfldzm.supabase.co';
+var SUPABASE_KEY = 'sb_publishable__by9VCo0-kgc7x5msoXB4A_P5r-UoQQ';
+
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* أطباق افتراضية لكل طاهية (تُضاف لاحقاً في قاعدة البيانات) */
+var DEFAULT_DISHES = [
+  { name: 'كسكس بالخضر السبع',    desc: 'كسكس مغربي أصيل بالخضر الموسمية',         emoji: '🫕', price: 40 },
+  { name: 'طجين الدجاج بالزيتون', desc: 'دجاج بلدي مع الزيتون والليمون المصفّر',   emoji: '🍲', price: 50 },
+  { name: 'حريرة مغربية',          desc: 'شوربة التقليدية بالطماطم والعدس',          emoji: '🥣', price: 18 }
 ];
 
 /* ============================================================
-   ÉTAT
+   STATE
    ============================================================ */
 var selectedCity  = '';
 var selectedChef  = null;
-var pendingDish   = null;   // الطبق المعلّق عند فتح المودال
+var pendingDish   = null;
+var chefGender    = 'f';
+var chefsCache    = [];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function prefix(gender) {
+  return gender === 'f' ? 'أمّي' : 'عمّي';
+}
+
+function stars(r) {
+  var s = ''; var f = Math.floor(r);
+  for (var i = 0; i < f; i++) s += '★';
+  if (r - f >= 0.5) s += '☆';
+  return s;
+}
+
+function cityLabel(city) {
+  return city === 'casablanca' ? 'الدار البيضاء' : 'الرباط';
+}
+
+function generateRef() {
+  return 'OF-' + Math.floor(10000 + Math.random() * 90000);
+}
+
+function sanitizeName(raw) {
+  return raw.replace(/^(أمي|أمّي|امي|عمي|عمّي)\s*/g, '').trim();
+}
 
 /* ============================================================
    NAVIGATION
@@ -122,56 +69,59 @@ function goToChefs() {
   var city = document.getElementById('city-select').value;
   if (!city) { alert('الرجاء اختيار المدينة أولاً'); return; }
   selectedCity = city;
-  var labels = { casablanca: 'الدار البيضاء', rabat: 'الرباط' };
-  var label  = labels[city] || city;
+  var label = cityLabel(city);
   document.getElementById('chefs-city-label').textContent = label;
   document.getElementById('city-pill').textContent = '📍 ' + label;
-  renderChefs();
+  loadChefs();
   showPage('chefs');
 }
 
 /* ============================================================
-   PAGE 2 — قائمة الطاهيين
+   PAGE 2 — تحميل الطاهيات من Supabase
    ============================================================ */
-function stars(r) {
-  var s = '';
-  var f = Math.floor(r);
-  for (var i = 0; i < f; i++) s += '★';
-  if (r - f >= 0.5) s += '☆';
-  return s;
-}
+async function loadChefs() {
+  var list = document.getElementById('chefs-list');
+  list.innerHTML = '<div class="loading-state"><span class="spin">🍽️</span>جاري تحميل المطابخ...</div>';
 
-function prefix(gender) {
-  return gender === 'f' ? 'أمّي' : 'عمّي';
-}
+  var result = await db
+    .from('chefs')
+    .select('*')
+    .eq('city', selectedCity)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
 
-function renderChefs() {
-  var list   = document.getElementById('chefs-list');
-  var data   = CHEFS.filter(function(c) { return c.city === selectedCity; });
-  if (!data.length) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>'
-      + '<div class="empty-title">لا توجد مطابخ متاحة في هذه المدينة حالياً</div></div>';
+  if (result.error) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>'
+      + '<div class="empty-title">تعذّر تحميل البيانات. حاول مجدداً.</div></div>';
     return;
   }
-  list.innerHTML = data.map(function(c) {
-    var pre     = prefix(c.gender);
-    var avCls   = c.available ? 's-available' : 's-busy';
-    var avTxt   = c.available ? '● متاحة الآن' : '● مشغولة حالياً';
-    var avaCls  = c.gender === 'm' ? 'male' : '';
-    var preCls  = c.gender === 'm' ? 'male' : '';
-    var avatarContent = c.photo
-      ? '<img src="' + c.photo + '" alt="' + c.name + '"/>'
-      : c.avatar;
-    return '<div class="chef-card" onclick="openChef(' + c.id + ')" role="button" tabindex="0">'
+
+  chefsCache = result.data || [];
+
+  if (!chefsCache.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>'
+      + '<div class="empty-title">لا توجد مطابخ متاحة في هذه المدينة حالياً</div>'
+      + '<div style="font-size:13px;margin-top:8px;color:var(--ink3)">كن أول من ينضم!</div></div>';
+    return;
+  }
+
+  list.innerHTML = chefsCache.map(function(c) {
+    var pre    = prefix(c.gender);
+    var avCls  = c.available ? 's-available' : 's-busy';
+    var avTxt  = c.available ? '● متاحة الآن' : '● مشغولة حالياً';
+    var avaCls = c.gender === 'm' ? 'male' : '';
+    var preCls = c.gender === 'm' ? 'male' : '';
+    var ava    = c.avatar || (c.gender === 'f' ? '👩‍🍳' : '👨‍🍳');
+    return '<div class="chef-card" onclick="openChef(\'' + c.id + '\')">'
       + '<div class="chef-card-inner">'
-      + '<div class="chef-avatar ' + avaCls + '">' + avatarContent + '</div>'
+      + '<div class="chef-avatar ' + avaCls + '">' + ava + '</div>'
       + '<div class="chef-info">'
       + '<div class="chef-prefix ' + preCls + '">' + pre + '</div>'
       + '<div class="chef-name-text">' + c.name + '</div>'
-      + '<div class="chef-specialty">' + c.specialty + '</div>'
+      + '<div class="chef-specialty">' + (c.specialty || '') + '</div>'
       + '<div class="chef-meta">'
-      + '<span class="chef-stars">' + stars(c.rating) + '</span>'
-      + '<span class="chef-rating-val">' + c.rating + '</span>'
+      + '<span class="chef-stars">' + stars(c.rating || 5) + '</span>'
+      + '<span class="chef-rating-val">' + (c.rating || 5) + '</span>'
       + '<span class="chef-status ' + avCls + '">' + avTxt + '</span>'
       + '</div></div>'
       + '<div class="chef-arrow">←</div>'
@@ -180,48 +130,45 @@ function renderChefs() {
 }
 
 /* ============================================================
-   PAGE 3 — تفاصيل المطبخ
+   PAGE 3 — تفاصيل الطاهية
    ============================================================ */
 function openChef(id) {
-  selectedChef = CHEFS.find(function(c) { return c.id === id; });
+  selectedChef = chefsCache.find(function(c) { return c.id === id; });
   if (!selectedChef) return;
 
   var pre = prefix(selectedChef.gender);
-  var avatarContent = selectedChef.photo
-    ? '<img src="' + selectedChef.photo + '" alt="' + selectedChef.name + '"/>'
-    : selectedChef.avatar;
+  var ava = selectedChef.avatar || (selectedChef.gender === 'f' ? '👩‍🍳' : '👨‍🍳');
 
   document.getElementById('detail-topbar-name').textContent = pre + ' ' + selectedChef.name;
-  document.getElementById('d-avatar').innerHTML = avatarContent;
-  document.getElementById('d-prefix').textContent = pre;
-  document.getElementById('d-name').textContent   = selectedChef.name;
-  document.getElementById('d-loc').textContent    = '📍 ' + selectedChef.cityLabel;
-  document.getElementById('d-stars').textContent  = stars(selectedChef.rating) + '  ' + selectedChef.rating;
-  document.getElementById('d-bio').textContent    = selectedChef.bio;
+  document.getElementById('d-avatar').textContent  = ava;
+  document.getElementById('d-prefix').textContent  = pre;
+  document.getElementById('d-name').textContent    = selectedChef.name;
+  document.getElementById('d-loc').textContent     = '📍 ' + cityLabel(selectedChef.city);
+  document.getElementById('d-stars').textContent   = stars(selectedChef.rating || 5) + '  ' + (selectedChef.rating || 5);
+  document.getElementById('d-bio').textContent     = selectedChef.bio || '';
   document.getElementById('d-phone-label').textContent = 'اتصل بـ ' + pre + ' ' + selectedChef.name;
 
   var badge = document.getElementById('d-status');
   if (selectedChef.available) {
-    badge.textContent = '● متاحة الآن';
-    badge.className   = 'chef-hero-status available';
+    badge.textContent = '● متاحة الآن'; badge.className = 'chef-hero-status available';
   } else {
-    badge.textContent = '● مشغولة حالياً';
-    badge.className   = 'chef-hero-status busy';
+    badge.textContent = '● مشغولة حالياً'; badge.className = 'chef-hero-status busy';
   }
 
-  document.getElementById('d-dishes').innerHTML = selectedChef.dishes.map(function(d) {
-    var safeName = d.name.replace(/'/g, "\\'");
+  /* أطباق الطاهية — افتراضية في المرحلة الأولى */
+  var dishes = selectedChef.dishes || DEFAULT_DISHES;
+  document.getElementById('d-dishes').innerHTML = dishes.map(function(d) {
+    var safeName = (d.name || '').replace(/'/g, "\\'");
     return '<div class="dish-card">'
       + '<div class="dish-top">'
-      + '<div class="dish-emoji">' + d.emoji + '</div>'
-      + '<div>'
-      + '<div class="dish-name">' + d.name + '</div>'
-      + '<div class="dish-desc">' + d.desc + '</div>'
-      + '</div></div>'
+      + '<div class="dish-emoji">' + (d.emoji || '🍽️') + '</div>'
+      + '<div><div class="dish-name">' + d.name + '</div>'
+      + '<div class="dish-desc">' + (d.desc || '') + '</div></div>'
+      + '</div>'
       + '<div class="dish-footer">'
-      + '<div class="dish-price">' + d.price + ' <span>درهم</span></div>'
+      + '<div class="dish-price">' + (d.price || '—') + ' <span>درهم</span></div>'
       + '<button class="btn-order" onclick="openOrderModal(\'' + safeName + '\')">'
-      + '<span>🛒</span> طلب الآن</button>'
+      + '🛒 طلب الآن</button>'
       + '</div></div>';
   }).join('');
 
@@ -229,64 +176,132 @@ function openChef(id) {
 }
 
 /* ============================================================
-   MODAL — نافذة تفاصيل الطلب
+   MODAL COMMANDE — نافذة الطلب
    ============================================================ */
 function openOrderModal(dishName) {
   pendingDish = dishName;
-  document.getElementById('modal-dish-name').textContent = dishName;
-  document.getElementById('modal-error').textContent     = '';
+  document.getElementById('modal-dish-tag').textContent = dishName;
+  document.getElementById('modal-error').textContent = '';
   document.getElementById('inp-name').value    = '';
   document.getElementById('inp-phone').value   = '';
   document.getElementById('inp-address').value = '';
   document.getElementById('inp-notes').value   = '';
   document.getElementById('order-modal').classList.add('open');
-  document.getElementById('inp-name').focus();
+  setTimeout(function(){ document.getElementById('inp-name').focus(); }, 100);
 }
 
-function closeModal() {
+function closeOrderModal() {
   document.getElementById('order-modal').classList.remove('open');
   pendingDish = null;
 }
 
-/* إغلاق عند الضغط خارج النافذة */
-document.getElementById('order-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-/* إغلاق بمفتاح Escape */
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeModal();
-});
-
-function confirmOrder() {
+async function confirmOrder() {
   var name    = document.getElementById('inp-name').value.trim();
   var phone   = document.getElementById('inp-phone').value.trim();
   var address = document.getElementById('inp-address').value.trim();
   var notes   = document.getElementById('inp-notes').value.trim();
   var errEl   = document.getElementById('modal-error');
 
-  /* التحقق من الحقول الإلزامية */
-  if (!name)    { errEl.textContent = 'الرجاء إدخال اسمك الكامل';  return; }
-  if (!phone)   { errEl.textContent = 'الرجاء إدخال رقم هاتفك';    return; }
+  if (!name)    { errEl.textContent = 'الرجاء إدخال اسمك الكامل';     return; }
+  if (!phone)   { errEl.textContent = 'الرجاء إدخال رقم هاتفك';       return; }
   if (!address) { errEl.textContent = 'الرجاء إدخال عنوانك أو حيّك'; return; }
   errEl.textContent = '';
 
-  /* بناء الرسالة */
+  var ref = generateRef();
   var pre = prefix(selectedChef.gender);
+
+  /* حفظ الطلب في Supabase */
+  await db.from('orders').insert({
+    order_ref:        ref,
+    chef_id:          selectedChef.id,
+    chef_name:        pre + ' ' + selectedChef.name,
+    dish_name:        pendingDish,
+    customer_name:    name,
+    customer_phone:   phone,
+    customer_address: address,
+    notes:            notes || null,
+    status:           'whatsapp_sent'
+  });
+
+  /* بناء رسالة WhatsApp */
   var msg = 'السلام عليكم ' + pre + ' ' + selectedChef.name + '،\n\n'
-    + 'أرغب في طلب عبر منصة Ommi Food:\n\n'
+    + '🔖 رقم الطلب: ' + ref + '\n\n'
     + '🍽️ الطبق: ' + pendingDish + '\n'
     + '👤 الاسم: ' + name + '\n'
     + '📞 الهاتف: ' + phone + '\n'
     + '📍 العنوان: ' + address
     + (notes ? '\n📝 ملاحظات: ' + notes : '')
-    + '\n\nشكراً جزيلاً 🙏';
+    + '\n\n_تم إنشاء هذا الطلب عبر Ommi Food_';
 
-  closeModal();
-  window.open(
-    'https://wa.me/' + selectedChef.phone + '?text=' + encodeURIComponent(msg),
-    '_blank'
-  );
+  closeOrderModal();
+  window.open('https://wa.me/' + selectedChef.phone + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+/* ============================================================
+   MODAL CHEF — تسجيل طاهية جديدة
+   ============================================================ */
+function openChefModal() {
+  document.getElementById('chef-modal').classList.add('open');
+  document.getElementById('chef-modal-error').textContent = '';
+  document.getElementById('chef-modal-success').style.display = 'none';
+  document.getElementById('chef-submit-btn').style.display = 'block';
+}
+
+function closeChefModal() {
+  document.getElementById('chef-modal').classList.remove('open');
+}
+
+function setChefGender(g) {
+  chefGender = g;
+  document.getElementById('go-f').className = 'gender-opt' + (g === 'f' ? ' active' : '');
+  document.getElementById('go-m').className = 'gender-opt' + (g === 'm' ? ' active' : '');
+  updateChefPreview();
+}
+
+function updateChefPreview() {
+  var raw  = document.getElementById('c-name').value;
+  var name = sanitizeName(raw) || (chefGender === 'f' ? 'فاطمة' : 'كريم');
+  document.getElementById('chef-preview').textContent = prefix(chefGender) + ' ' + name;
+}
+
+async function submitChef() {
+  var name      = sanitizeName(document.getElementById('c-name').value.trim());
+  var phone     = document.getElementById('c-phone').value.trim();
+  var city      = document.getElementById('c-city').value;
+  var specialty = document.getElementById('c-specialty').value.trim();
+  var bio       = document.getElementById('c-bio').value.trim();
+  var errEl     = document.getElementById('chef-modal-error');
+
+  if (!name)      { errEl.textContent = 'الرجاء إدخال اسمك';        return; }
+  if (!phone)     { errEl.textContent = 'الرجاء إدخال رقم WhatsApp'; return; }
+  if (!city)      { errEl.textContent = 'الرجاء اختيار المدينة';     return; }
+  if (!specialty) { errEl.textContent = 'الرجاء إدخال تخصصك';       return; }
+  errEl.textContent = '';
+
+  document.getElementById('chef-submit-btn').textContent = '...جاري الإرسال';
+  document.getElementById('chef-submit-btn').disabled = true;
+
+  var result = await db.from('chefs').insert({
+    name:       name,
+    gender:     chefGender,
+    phone:      phone,
+    city:       city,
+    city_label: cityLabel(city),
+    specialty:  specialty,
+    bio:        bio || null,
+    status:     'pending'
+  });
+
+  document.getElementById('chef-submit-btn').textContent = 'إرسال طلب الانضمام';
+  document.getElementById('chef-submit-btn').disabled = false;
+
+  if (result.error) {
+    errEl.textContent = 'حدث خطأ. حاول مجدداً.';
+    return;
+  }
+
+  document.getElementById('chef-modal-success').style.display = 'block';
+  document.getElementById('chef-submit-btn').style.display = 'none';
 }
 
 /* ============================================================
@@ -298,14 +313,19 @@ function callChef() {
 }
 
 /* ============================================================
-   قاعدة أمّي / عمّي — حذف البادئة المكررة
-   (تُستعمل مستقبلاً عند إضافة نموذج تسجيل الطاهية)
+   إغلاق المودال بالضغط خارجه أو بـ Escape
    ============================================================ */
-function sanitizeName(rawName, gender) {
-  var forbidden = /^(أمي|أمّي|امي|عمي|عمّي)\s*/;
-  var clean = rawName.replace(forbidden, '').trim();
-  return prefix(gender) + ' ' + clean;
-}
+['order-modal', 'chef-modal'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) {
+      if (id === 'order-modal') closeOrderModal();
+      else closeChefModal();
+    }
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeOrderModal(); closeChefModal(); }
+});
 
 /* ============================================================
    INIT
