@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك. وجبات مغربية أصيلة من مطابخ الأمهات."/>
+<meta property="og:title" content="Ommi Food — أمّي فود"/>
+<meta property="og:description" content="من مطبخ أمهاتنا إلى قلب بيتك"/>
+<meta property="og:url" content="https://ommifood.com"/>
+<meta name="theme-color" content="#C0392B"/>
+<title>Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="loader">
+  <div class="loader-logo">Ommi Food</div>
+  <div class="loader-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- PAGE: HOME -->
+<div id="page-home" class="page">
+  <div class="hero-logo">
+    <div class="hero-logo-text">Ommi Food</div>
+    <div class="hero-logo-ar">أمّي فود</div>
+  </div>
+  <h1 class="hero-tagline">من مطبخ أمهاتنا إلى قلب بيتك</h1>
+  <p class="hero-tagline-fr">De la cuisine de nos mères à votre foyer</p>
+  <div class="hero-form">
+    <div class="city-label">اختر مدينتك — Choisissez votre ville</div>
+    <select class="city-select" id="city-select">
+      <option value="">— اختر المدينة —</option>
+      <option value="casablanca">الدار البيضاء — Casablanca</option>
+      <option value="rabat">الرباط — Rabat</option>
+    </select>
+    <button class="explore-btn" onclick="goToChefs()">استكشاف الطاهيات ←</button>
+  </div>
+  <div class="hero-deco">
+    <span>🫕</span><span>🍲</span><span>🥘</span><span>🫖</span><span>🥐</span>
+  </div>
+</div>
+
+<!-- PAGE: CHEFS LIST -->
+<div id="page-chefs" class="page">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showPage('home')">←</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">الطاهيات المتاحات</div>
+      <div class="top-bar-sub" id="chefs-city-label">—</div>
+    </div>
+    <div class="top-bar-brand">Ommi Food</div>
+  </div>
+  <div class="page-body">
+    <div class="city-pill" id="city-pill">📍</div>
+    <div id="chefs-list"></div>
+  </div>
+</div>
+
+<!-- PAGE: CHEF DETAIL -->
+<div id="page-detail" class="page">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showPage('chefs')">←</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title" id="detail-topbar-name">ملف الطاهية</div>
+    </div>
+    <div class="top-bar-brand">Ommi Food</div>
+  </div>
+
+  <div class="chef-hero">
+    <div class="chef-hero-avatar" id="d-avatar">👩‍🍳</div>
+    <div class="chef-hero-prefix" id="d-prefix">أمّي</div>
+    <div class="chef-hero-name" id="d-name">—</div>
+    <div class="chef-hero-loc" id="d-loc">📍 —</div>
+    <div class="chef-hero-stars" id="d-stars">★★★★★</div>
+    <div class="chef-hero-status" id="d-status-badge">متاحة الآن</div>
+  </div>
+
+  <div class="page-body">
+    <div class="bio-box" id="d-bio"></div>
+    <div class="section-label">قائمة الأطباق</div>
+    <div id="d-dishes"></div>
+    <div class="contact-box">
+      <div class="contact-box-title">📞 تواصل مع الطاهية</div>
+      <button class="btn-whatsapp" onclick="openWhatsApp()">
+        <span>💬</span> طلب عبر WhatsApp
+      </button>
+      <button class="btn-phone" onclick="callChef()">
+        <span>📞</span> <span id="d-phone-label">اتصل مباشرة</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="footer-brand">Ommi Food</div>
+    <div class="footer-sub">أكل البيت — بحنان الأم</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
