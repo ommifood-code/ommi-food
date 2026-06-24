@@ -39,7 +39,34 @@ function stars(r) {
 }
 
 function cityLabel(city) {
-  return city === 'casablanca' ? 'الدار البيضاء' : 'الرباط';
+  var labels = {
+    casablanca:  'الدار البيضاء',
+    rabat:       'الرباط',
+    sale:        'سلا',
+    tanger:      'طنجة',
+    tetouan:     'تطوان',
+    chefchaouen: 'شفشاون',
+    alhoceima:   'الحسيمة',
+    larache:     'العرائش',
+    kenitra:     'القنيطرة',
+    settat:      'سطات',
+    eljadida:    'الجديدة',
+    meknes:      'مكناس',
+    fes:         'فاس',
+    taza:        'تازة',
+    benimelal:   'بني ملال',
+    khenifra:    'خنيفرة',
+    khouribga:   'خريبكة',
+    marrakech:   'مراكش',
+    safi:        'آسفي',
+    essaouira:   'الصويرة',
+    agadir:      'أكادير',
+    ouarzazate:  'ورززات',
+    oujda:       'وجدة',
+    nador:       'الناظور',
+    ifrane:      'إفران'
+  };
+  return labels[city] || city;
 }
 
 function generateRef() {
