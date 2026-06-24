@@ -363,3 +363,149 @@ window.addEventListener('load', function() {
     showPage('home');
   }, 800);
 });
+
+/* ============================================================
+   ADMIN — لوحة التحكم
+   ============================================================ */
+
+/* كلمة المرور اليومية المتغيرة */
+function getAdminPassword() {
+  var d = new Date();
+  var day  = String(d.getDate()).padStart(2,'0');
+  var year = String(d.getFullYear()).slice(-2);
+  return 'ommi' + day + year;
+}
+
+function adminLogin() {
+  var pass  = document.getElementById('admin-pass').value;
+  var errEl = document.getElementById('login-error');
+  if (pass === getAdminPassword()) {
+    sessionStorage.setItem('ommi_admin', '1');
+    errEl.textContent = '';
+    loadAdminData();
+    showPage('admin');
+  } else {
+    errEl.textContent = 'كلمة المرور غير صحيحة';
+  }
+}
+
+function adminLogout() {
+  sessionStorage.removeItem('ommi_admin');
+  showPage('home');
+}
+
+function openAdmin() {
+  if (sessionStorage.getItem('ommi_admin') === '1') {
+    loadAdminData();
+    showPage('admin');
+  } else {
+    showPage('admin-login');
+    setTimeout(function(){ document.getElementById('admin-pass').focus(); }, 100);
+  }
+}
+
+/* ---- تحميل البيانات ---- */
+async function loadAdminData() {
+  var [chefsRes, ordersRes] = await Promise.all([
+    db.from('chefs').select('*').order('created_at', { ascending: false }),
+    db.from('orders').select('*').order('created_at', { ascending: false })
+  ]);
+
+  var chefs  = chefsRes.data  || [];
+  var orders = ordersRes.data || [];
+
+  /* KPIs */
+  document.getElementById('kpi-total-chefs').textContent  = chefs.length;
+  document.getElementById('kpi-active-chefs').textContent = chefs.filter(function(c){ return c.status==='active'; }).length;
+  document.getElementById('kpi-pending-chefs').textContent= chefs.filter(function(c){ return c.status==='pending'; }).length;
+  document.getElementById('kpi-total-orders').textContent = orders.length;
+
+  renderAdminChefs(chefs);
+  renderAdminOrders(orders);
+  renderAdminCities(orders);
+}
+
+/* ---- الطاهيات ---- */
+function renderAdminChefs(chefs) {
+  var el = document.getElementById('admin-chefs-list');
+  if (!chefs.length) { el.innerHTML = '<div class="admin-empty">لا توجد طاهيات بعد</div>'; return; }
+  el.innerHTML = chefs.map(function(c) {
+    var pre    = c.gender === 'f' ? 'أمّي' : 'عمّي';
+    var badge  = '<span class="badge badge-' + c.status + '">' + c.status + '</span>';
+    var btns   = '';
+    if (c.status === 'pending')
+      btns += '<button class="admin-btn btn-approve" onclick="chefAction(\'' + c.id + '\',\'active\')">✓ موافقة</button>';
+    if (c.status === 'active')
+      btns += '<button class="admin-btn btn-hide" onclick="chefAction(\'' + c.id + '\',\'inactive\')">إخفاء</button>';
+    if (c.status === 'inactive')
+      btns += '<button class="admin-btn btn-show" onclick="chefAction(\'' + c.id + '\',\'active\')">إظهار</button>';
+    btns += '<button class="admin-btn btn-delete" onclick="chefDelete(\'' + c.id + '\')">حذف</button>';
+    return '<div class="admin-row chefs-header">'
+      + '<div><strong>' + pre + ' ' + c.name + '</strong><div style="font-size:11px;color:#888">📞 ' + c.phone + '</div></div>'
+      + '<div>' + cityLabel(c.city) + '</div>'
+      + '<div style="font-size:12px">' + (c.specialty || '—') + '</div>'
+      + '<div>' + badge + '</div>'
+      + '<div class="admin-actions">' + btns + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function chefAction(id, status) {
+  await db.from('chefs').update({ status: status }).eq('id', id);
+  loadAdminData();
+}
+
+async function chefDelete(id) {
+  if (!confirm('حذف هذه الطاهية نهائياً؟')) return;
+  await db.from('chefs').delete().eq('id', id);
+  loadAdminData();
+}
+
+/* ---- الطلبات ---- */
+function renderAdminOrders(orders) {
+  var el = document.getElementById('admin-orders-list');
+  if (!orders.length) { el.innerHTML = '<div class="admin-empty">لا توجد طلبات بعد</div>'; return; }
+  el.innerHTML = orders.map(function(o) {
+    var d = new Date(o.created_at);
+    var time = d.toLocaleDateString('ar-MA') + ' ' + d.toLocaleTimeString('ar-MA', {hour:'2-digit',minute:'2-digit'});
+    return '<div class="admin-row orders-header">'
+      + '<div><strong style="color:#B03A2E">' + o.order_ref + '</strong><div style="font-size:10px;color:#888">' + time + '</div></div>'
+      + '<div><div>' + o.dish_name + '</div><div style="font-size:11px;color:#888">' + (o.chef_name||'—') + '</div></div>'
+      + '<div><div>' + o.customer_name + '</div><div style="font-size:11px;color:#888">📞 ' + o.customer_phone + '</div></div>'
+      + '<div style="font-size:12px">📍 ' + o.customer_address + '</div>'
+      + '<div><span class="badge badge-sent">WhatsApp</span></div>'
+      + '</div>';
+  }).join('');
+}
+
+/* ---- إحصائيات المدن ---- */
+function renderAdminCities(orders) {
+  var el = document.getElementById('admin-cities-list');
+  if (!orders.length) { el.innerHTML = '<div class="admin-empty">لا توجد طلبات بعد</div>'; return; }
+  var counts = {};
+  orders.forEach(function(o) {
+    var city = o.customer_address || 'غير محدد';
+    counts[city] = (counts[city] || 0) + 1;
+  });
+  var sorted = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; });
+  el.innerHTML = sorted.map(function(e) {
+    return '<div class="city-stat-card">'
+      + '<div class="city-stat-name">' + e[0] + '</div>'
+      + '<div class="city-stat-count">' + e[1] + '</div>'
+      + '<div class="city-stat-label">طلب</div>'
+      + '</div>';
+  }).join('');
+}
+
+/* ---- التبويبات ---- */
+function switchTab(name) {
+  document.querySelectorAll('.admin-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* رابط الإدارة السري */
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') openAdmin();
+});

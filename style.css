@@ -445,3 +445,125 @@ textarea, input, select { font-family: inherit; }
   animation: spin 1.2s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== ADMIN ===== */
+#page-admin.active {
+  display: block; min-height: 100vh;
+  background: #F4F6F9;
+}
+.admin-topbar {
+  background: #1A1A2E; color: #fff;
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.admin-topbar-logo { font-size: 16px; font-weight: 800; color: #E8A838; }
+.admin-topbar-sub  { font-size: 11px; opacity: .6; margin-top: 2px; }
+.admin-logout {
+  background: rgba(255,255,255,.12); color: #fff;
+  border: none; border-radius: 6px;
+  padding: 7px 14px; font-size: 12px; cursor: pointer;
+  font-family: inherit;
+}
+.admin-body { padding: 20px; max-width: 900px; margin: 0 auto; }
+.admin-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+.admin-kpi {
+  background: #fff; border-radius: 10px;
+  padding: 14px; border: 1px solid #E2E8F0;
+}
+.admin-kpi-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.admin-kpi-value { font-size: 26px; font-weight: 800; color: #1A1A2E; }
+.admin-kpi-sub   { font-size: 11px; color: #27AE60; margin-top: 3px; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.admin-tab {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px;
+  font-weight: 600; border: none; cursor: pointer;
+  background: #fff; color: #666; font-family: inherit;
+  border: 1px solid #E2E8F0;
+  transition: all .15s;
+}
+.admin-tab.active { background: #1A1A2E; color: #fff; border-color: #1A1A2E; }
+.admin-panel { display: none; }
+.admin-panel.active { display: block; }
+.admin-table {
+  background: #fff; border-radius: 10px;
+  border: 1px solid #E2E8F0; overflow: hidden;
+}
+.admin-table-header {
+  display: grid; padding: 10px 16px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 11px; font-weight: 700;
+  color: #888; text-transform: uppercase; letter-spacing: .06em;
+}
+.admin-row {
+  display: grid; padding: 12px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  align-items: center; font-size: 13px;
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row:hover { background: #FAFBFC; }
+.chefs-header { grid-template-columns: 2fr 1fr 1fr 1fr 120px; }
+.orders-header { grid-template-columns: 1fr 1.5fr 1fr 1fr 80px; }
+.badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 20px;
+}
+.badge-pending  { background: #FEF3C7; color: #92400E; }
+.badge-active   { background: #D1FAE5; color: #065F46; }
+.badge-inactive { background: #F1F5F9; color: #64748B; }
+.badge-sent     { background: #DBEAFE; color: #1E40AF; }
+.admin-btn {
+  padding: 5px 10px; border-radius: 6px; font-size: 11px;
+  font-weight: 600; border: none; cursor: pointer;
+  font-family: inherit; transition: opacity .15s;
+}
+.admin-btn:hover { opacity: .8; }
+.btn-approve  { background: #D1FAE5; color: #065F46; }
+.btn-hide     { background: #FEF3C7; color: #92400E; }
+.btn-show     { background: #DBEAFE; color: #1E40AF; }
+.btn-delete   { background: #FEE2E2; color: #991B1B; }
+.admin-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+.city-stats { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 10px; }
+.city-stat-card {
+  background: #fff; border-radius: 10px; padding: 14px;
+  border: 1px solid #E2E8F0; text-align: center;
+}
+.city-stat-name  { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.city-stat-count { font-size: 22px; font-weight: 800; color: #B03A2E; }
+.city-stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+.admin-empty { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+
+/* LOGIN */
+#page-admin-login.active {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: #1A1A2E;
+}
+.login-box {
+  background: #fff; border-radius: 14px;
+  padding: 36px 28px; width: 100%; max-width: 340px;
+  text-align: center;
+}
+.login-logo { font-size: 24px; font-weight: 800; color: #B03A2E; margin-bottom: 4px; }
+.login-sub  { font-size: 12px; color: #888; margin-bottom: 24px; }
+.login-label { display: block; font-size: 12px; color: #555; margin-bottom: 6px; text-align: right; }
+.login-input {
+  width: 100%; padding: 11px 13px; border: 1.5px solid #E2E8F0;
+  border-radius: 8px; font-size: 14px; font-family: inherit;
+  outline: none; margin-bottom: 14px; background: #F8FAFC;
+  transition: border-color .15s;
+}
+.login-input:focus { border-color: #B03A2E; }
+.login-btn {
+  width: 100%; background: #1A1A2E; color: #fff;
+  border: none; border-radius: 8px; padding: 13px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity .15s;
+}
+.login-btn:hover { opacity: .88; }
+.login-error { font-size: 12px; color: #B03A2E; margin-bottom: 12px; min-height: 16px; }
+
+@media(max-width:600px){
+  .admin-kpis { grid-template-columns: 1fr 1fr; }
+  .chefs-header,.orders-header { display: none; }
+  .admin-row { grid-template-columns: 1fr !important; gap: 6px; }
+}

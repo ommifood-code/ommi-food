@@ -226,6 +226,98 @@
   </div>
 </div>
 
+
+<!-- PAGE: ADMIN LOGIN -->
+<div id="page-admin-login" class="page">
+  <div class="login-box">
+    <div class="login-logo">Ommi Food</div>
+    <div class="login-sub">لوحة تحكم المدير</div>
+    <label class="login-label" for="admin-pass">كلمة المرور</label>
+    <input class="login-input" type="password" id="admin-pass" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') adminLogin()"/>
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="adminLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- PAGE: ADMIN DASHBOARD -->
+<div id="page-admin" class="page">
+  <div class="admin-topbar">
+    <div>
+      <div class="admin-topbar-logo">⚙️ Ommi Food — Admin</div>
+      <div class="admin-topbar-sub">لوحة التحكم</div>
+    </div>
+    <button class="admin-logout" onclick="adminLogout()">خروج</button>
+  </div>
+
+  <div class="admin-body">
+    <!-- KPIs -->
+    <div class="admin-kpis">
+      <div class="admin-kpi">
+        <div class="admin-kpi-label">إجمالي الطاهيات</div>
+        <div class="admin-kpi-value" id="kpi-total-chefs">—</div>
+      </div>
+      <div class="admin-kpi">
+        <div class="admin-kpi-label">طاهيات نشطة</div>
+        <div class="admin-kpi-value" id="kpi-active-chefs">—</div>
+        <div class="admin-kpi-sub">ظاهرات للزبائن</div>
+      </div>
+      <div class="admin-kpi">
+        <div class="admin-kpi-label">بانتظار الموافقة</div>
+        <div class="admin-kpi-value" id="kpi-pending-chefs">—</div>
+      </div>
+      <div class="admin-kpi">
+        <div class="admin-kpi-label">إجمالي الطلبات</div>
+        <div class="admin-kpi-value" id="kpi-total-orders">—</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchTab('chefs')">👩‍🍳 الطاهيات</button>
+      <button class="admin-tab" onclick="switchTab('orders')">📋 الطلبات</button>
+      <button class="admin-tab" onclick="switchTab('cities')">🗺️ المدن</button>
+    </div>
+
+    <!-- TAB: CHEFS -->
+    <div id="tab-chefs" class="admin-panel active">
+      <div class="admin-table">
+        <div class="admin-table-header chefs-header">
+          <span>الطاهية</span>
+          <span>المدينة</span>
+          <span>التخصص</span>
+          <span>الحالة</span>
+          <span>إجراءات</span>
+        </div>
+        <div id="admin-chefs-list">
+          <div class="admin-empty">جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: ORDERS -->
+    <div id="tab-orders" class="admin-panel">
+      <div class="admin-table">
+        <div class="admin-table-header orders-header">
+          <span>رقم الطلب</span>
+          <span>الطبق / الطاهية</span>
+          <span>الزبون</span>
+          <span>المدينة</span>
+          <span>الحالة</span>
+        </div>
+        <div id="admin-orders-list">
+          <div class="admin-empty">جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CITIES -->
+    <div id="tab-cities" class="admin-panel">
+      <div class="city-stats" id="admin-cities-list"></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
