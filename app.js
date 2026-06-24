@@ -357,9 +357,25 @@ document.addEventListener('keydown', function(e) {
 /* ============================================================
    INIT
    ============================================================ */
+/* ============================================================
+   التاريخ الظاهر في الموقع — مرجع كلمة السر
+   كلمة السر = ommi + يوم + آخر رقمين من السنة
+   مثال: التاريخ 24/06/26 → كلمة السر: ommi2426
+   ============================================================ */
+function renderSiteDate() {
+  var el = document.getElementById('home-date');
+  if (!el) return;
+  var d    = new Date();
+  var day  = String(d.getDate()).padStart(2,'0');
+  var mon  = String(d.getMonth()+1).padStart(2,'0');
+  var year = String(d.getFullYear()).slice(-2);
+  el.textContent = day + '/' + mon + '/' + year;
+}
+
 window.addEventListener('load', function() {
   setTimeout(function() {
     document.getElementById('loader').classList.add('hidden');
+    renderSiteDate();
     showPage('home');
   }, 800);
 });
