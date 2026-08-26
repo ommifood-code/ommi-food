@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#B6382D" />
   <title>Ommi Food</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <main>
@@ -15,7 +16,6 @@
         <div class="logo">Ommi Food</div>
         <div class="logo-ar">أمّي فود</div>
         <h1>من مطبخ أمهاتنا...<br>كما لو كنت في البيت</h1>
-
         <div class="home-form">
           <label for="citySelect">اختر مدينتك</label>
           <select id="citySelect">
@@ -79,11 +79,10 @@
   <div class="modal" id="orderModal" aria-hidden="true">
     <div class="modal-card">
       <button class="close" data-close>×</button>
-      <div class="profile-head">
-        <div class="avatar large" id="orderAvatar">ف</div>
+      <div class="profile-head text-only">
         <div>
-          <h2 id="orderChefName">أمّي فاطمة</h2>
-          <p id="orderChefArea">المعاريف</p>
+          <h2 id="orderChefName"></h2>
+          <p id="orderChefArea"></p>
         </div>
       </div>
       <div id="dishList" class="dish-list"></div>
@@ -107,12 +106,13 @@
         <button class="gender" data-gender="male">ذكر · عمّي</button>
       </div>
       <input id="joinName" class="field" placeholder="الاسم الأول" />
-      <div class="preview">سيظهر اسمك: <strong id="namePreview">أمّي فاطمة</strong></div>
+      <div class="preview">سيظهر اسمك: <strong id="namePreview">أمّي + اسمك</strong></div>
       <input id="joinPhone" class="field" placeholder="رقم الهاتف" />
       <select id="joinCity" class="field"><option value="casablanca">الدار البيضاء</option></select>
       <input id="joinSpecialty" class="field" placeholder="التخصص" />
       <textarea id="joinBio" class="field" rows="4" placeholder="نبذة قصيرة عن مطبخك"></textarea>
       <button class="primary full" id="submitJoinBtn">إرسال طلب الانضمام</button>
+      <p class="join-note">لن يظهر ملفك للزبائن قبل موافقة Ommi Food.</p>
     </div>
   </div>
 
