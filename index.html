@@ -1,325 +1,180 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="description" content="Ommi Food — من مطبخ أمهاتنا إلى قلب بيتك"/>
-<meta name="theme-color" content="#B03A2E"/>
-<title>Ommi Food</title>
-<link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ommi Food — من مطبخ أمهاتنا... كما لو كنت في البيت" />
+  <meta name="theme-color" content="#8F2F27" />
+  <title>Ommi Food</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Ommi Food">
+      <span class="brand-mark">أمّي</span>
+      <span class="brand-name">Ommi Food</span>
+    </a>
+    <nav class="nav-actions">
+      <button class="ghost-btn" id="languageBtn">FR</button>
+      <button class="primary-small" data-open-join>انضمي إلى أمّي فود</button>
+    </nav>
+  </header>
 
-<!-- LOADER -->
-<div id="loader">
-  <div class="loader-logo">Ommi Food</div>
-  <div class="loader-dots"><span></span><span></span><span></span></div>
-</div>
-
-<!-- MODAL: طلب -->
-<div id="order-modal" class="modal-overlay">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeOrderModal()">✕</button>
-    <div class="modal-dish-tag" id="modal-dish-tag"></div>
-    <h2 class="modal-title">تفاصيل طلبك</h2>
-    <p class="modal-sub">سيصل طلبك للطاهية عبر WhatsApp مع رقم تتبع</p>
-    <div class="form-field">
-      <label class="form-label" for="inp-name">الاسم الكامل *</label>
-      <input class="form-input" type="text" id="inp-name" placeholder="محمد أمين..."/>
-    </div>
-    <div class="form-field">
-      <label class="form-label" for="inp-phone">رقم الهاتف *</label>
-      <input class="form-input" type="tel" id="inp-phone" placeholder="+212 6XX XXX XXX" dir="ltr"/>
-    </div>
-    <div class="form-field">
-      <label class="form-label" for="inp-address">الحي أو العنوان *</label>
-      <input class="form-input" type="text" id="inp-address" placeholder="الحي، الشارع..."/>
-    </div>
-    <div class="form-field">
-      <label class="form-label" for="inp-notes">ملاحظات إضافية</label>
-      <textarea class="form-input form-textarea" id="inp-notes" placeholder="حساسية، كمية، وقت التسليم..."></textarea>
-    </div>
-    <div class="modal-error" id="modal-error"></div>
-    <button class="confirm-btn" onclick="confirmOrder()">
-      💬 تأكيد الطلب عبر WhatsApp
-    </button>
-  </div>
-</div>
-
-<!-- MODAL: تسجيل طاهية -->
-<div id="chef-modal" class="modal-overlay">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeChefModal()">✕</button>
-    <h2 class="modal-title">انضم إلى Ommi Food</h2>
-    <p class="modal-sub">سجّل مطبخك واستقبل طلبات الزبائن</p>
-
-    <div class="form-field">
-      <label class="form-label">الجنس *</label>
-      <div class="gender-row">
-        <div class="gender-opt active" id="go-f" onclick="setChefGender('f')">
-          <span>👩</span> أنثى — أمّي
-        </div>
-        <div class="gender-opt" id="go-m" onclick="setChefGender('m')">
-          <span>👨</span> ذكر — عمّي
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">الدار البيضاء · الإطلاق الأول</p>
+        <h1>من مطبخ أمهاتنا...<br><span>كما لو كنت في البيت</span></h1>
+        <p class="hero-text">وجبات مغربية مطهية على مهل، من مطابخ منزلية حقيقية. للأيام التي لا تمنحك وقتًا للبيت، لكنك لا تريد أن تتنازل عن طعمه.</p>
+        <div class="city-box">
+          <label for="citySelect">أين تريد أن تأكل اليوم؟</label>
+          <div class="city-row">
+            <select id="citySelect">
+              <option value="">اختر مدينتك</option>
+              <option value="casablanca">الدار البيضاء</option>
+              <option value="rabat">الرباط</option>
+              <option value="sale">سلا</option>
+              <option value="tanger">طنجة</option>
+              <option value="tetouan">تطوان</option>
+              <option value="chefchaouen">شفشاون</option>
+              <option value="alhoceima">الحسيمة</option>
+              <option value="larache">العرائش</option>
+              <option value="kenitra">القنيطرة</option>
+              <option value="settat">سطات</option>
+              <option value="eljadida">الجديدة</option>
+              <option value="meknes">مكناس</option>
+              <option value="fes">فاس</option>
+              <option value="taza">تازة</option>
+              <option value="benimelal">بني ملال</option>
+              <option value="khenifra">خنيفرة</option>
+              <option value="khouribga">خريبكة</option>
+              <option value="marrakech">مراكش</option>
+              <option value="safi">آسفي</option>
+              <option value="essaouira">الصويرة</option>
+              <option value="agadir">أكادير</option>
+              <option value="ouarzazate">ورززات</option>
+              <option value="oujda">وجدة</option>
+              <option value="nador">الناظور</option>
+              <option value="ifrane">إفران</option>
+            </select>
+            <button class="primary-btn" id="discoverBtn">اكتشف مطابخ قريبة</button>
+          </div>
+          <p class="city-note">متاح الآن في الدار البيضاء. باقي المدن تُفتح تدريجيًا.</p>
         </div>
       </div>
-    </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="steam steam-a"></div><div class="steam steam-b"></div><div class="steam steam-c"></div>
+        <div class="tagine">
+          <div class="tagine-top"></div>
+          <div class="tagine-bowl"></div>
+        </div>
+        <div class="visual-note">طبخ بيدٍ تعرف الوصفة<br>لا بخط إنتاج</div>
+      </div>
+    </section>
 
-    <div class="form-field">
-      <label class="form-label" for="c-name">الاسم الأول *</label>
-      <input class="form-input" type="text" id="c-name" placeholder="فاطمة أو كريم..." oninput="updateChefPreview()"/>
-      <div class="chef-preview" id="chef-preview">أمّي فاطمة</div>
-    </div>
+    <section class="promise-strip">
+      <div><strong>مطابخ منزلية</strong><span>أشخاص حقيقيون، لا مطاعم متخفية</span></div>
+      <div><strong>وصفات مغربية</strong><span>كسكس، طاجين، رفيسة، بسطيلة وأكثر</span></div>
+      <div><strong>قريب منك</strong><span>ابدأ من حيك، لا من آخر المدينة</span></div>
+    </section>
 
-    <div class="form-field">
-      <label class="form-label" for="c-phone">رقم WhatsApp *</label>
-      <input class="form-input" type="tel" id="c-phone" placeholder="212XXXXXXXXX" dir="ltr"/>
-    </div>
+    <section class="story-section">
+      <div class="story-kicker">لماذا أمّي فود؟</div>
+      <h2>لأن الطبق الذي نشتاق إليه<br>لا يُختصر في وصفة.</h2>
+      <p>الكسكس نفسه يمكن أن يكون مجرد حبوب وخضر، ويمكن أن يكون ذاكرة كاملة. الفرق في اليد التي أعدّته، وفي الوقت الذي أُعطي له، وفي التفاصيل التي لا تكتبها قوائم المطاعم. أمّي فود تبحث عن هذا الفرق وتقرّبه منك.</p>
+    </section>
 
-    <div class="form-field">
-      <label class="form-label" for="c-city">المدينة *</label>
-      <select class="form-input form-select" id="c-city">
-        <option value="">— اختر —</option>
-      <option value="casablanca">الدار البيضاء</option>
-      <option value="rabat">الرباط</option>
-      <option value="sale">سلا</option>
-      <option value="tanger">طنجة</option>
-      <option value="tetouan">تطوان</option>
-      <option value="chefchaouen">شفشاون</option>
-      <option value="alhoceima">الحسيمة</option>
-      <option value="larache">العرائش</option>
-      <option value="kenitra">القنيطرة</option>
-      <option value="settat">سطات</option>
-      <option value="eljadida">الجديدة</option>
-      <option value="meknes">مكناس</option>
-      <option value="fes">فاس</option>
-      <option value="taza">تازة</option>
-      <option value="benimelal">بني ملال</option>
-      <option value="khenifra">خنيفرة</option>
-      <option value="khouribga">خريبكة</option>
-      <option value="marrakech">مراكش</option>
-      <option value="safi">آسفي</option>
-      <option value="essaouira">الصويرة</option>
-      <option value="agadir">أكادير</option>
-      <option value="ouarzazate">ورززات</option>
-      <option value="oujda">وجدة</option>
-      <option value="nador">الناظور</option>
-      <option value="ifrane">إفران</option>
-      </select>
-    </div>
+    <section class="chefs-section" id="chefsSection">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">مختارات الدار البيضاء</p>
+          <h2>مطابخ لها اسم ووجه وحكاية</h2>
+        </div>
+        <span class="live-pill">متاح الآن</span>
+      </div>
+      <div class="chef-grid" id="chefGrid"></div>
+    </section>
 
-    <div class="form-field">
-      <label class="form-label" for="c-specialty">التخصص *</label>
-      <input class="form-input" type="text" id="c-specialty" placeholder="كسكس — طجين — حريرة..."/>
-    </div>
+    <section class="how-section">
+      <div class="how-copy">
+        <p class="eyebrow">طلب بسيط، علاقة واضحة</p>
+        <h2>اختر الطبق، حدّد الاستلام، واترك الباقي لنا.</h2>
+        <p>رقم الطاهية لا يُعرض للزبون. الطلب يبقى داخل Ommi Food حتى لا يتحول الموقع إلى دليل هواتف أنيق يطرد نفسه من الصفقة.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><span>1</span><strong>اختر مطبخًا قريبًا</strong><p>حسب الحي والتوفر.</p></div>
+        <div class="step"><span>2</span><strong>اختر طبقك</strong><p>وشاهد السعر والكمية.</p></div>
+        <div class="step"><span>3</span><strong>استلام أو توصيل</strong><p>وفق ما توفره الطاهية.</p></div>
+      </div>
+    </section>
 
-    <div class="form-field">
-      <label class="form-label" for="c-bio">نبذة عن مطبخك</label>
-      <textarea class="form-input form-textarea" id="c-bio" placeholder="أطبخ منذ... متخصصة في..."></textarea>
-    </div>
+    <section class="join-section">
+      <div>
+        <p class="eyebrow">هل مطبخك يستحق أن يُعرف؟</p>
+        <h2>في أمّي فود، اسمك يصبح علامة.</h2>
+        <p>تسجّلين باسمك الحقيقي، والمنصة تمنحك هوية «أمّي». وإذا كنت طاهيًا رجلًا تظهر «عمّي» تلقائيًا. نفس الاحترام، مع بقاء قصة العلامة وفية لأصلها: مطبخ الأم.</p>
+      </div>
+      <button class="join-cta" data-open-join>ابدئي طلب الانضمام</button>
+    </section>
+  </main>
 
-    <div class="modal-error" id="chef-modal-error"></div>
-    <div class="modal-success" id="chef-modal-success" style="display:none">
-      ✅ تم إرسال طلبك! سنتواصل معك خلال 24 ساعة.
-    </div>
-    <button class="confirm-btn" id="chef-submit-btn" onclick="submitChef()">
-      إرسال طلب الانضمام
-    </button>
-  </div>
-</div>
-
-<!-- PAGE: HOME -->
-<div id="page-home" class="page">
-  <div class="home-inner">
-    <div class="home-logo">
-      <div class="logo-text">Ommi Food</div>
-      <div class="logo-ar">أمّي فود</div>
-    </div>
-    <h1 class="home-tagline">من مطبخ أمهاتنا<br/>إلى قلب بيتك</h1>
-    <p class="home-tagline-fr">De la cuisine de nos mères à votre foyer</p>
-    <div class="home-form">
-      <label class="city-label" for="city-select">اختر مدينتك</label>
-      <select class="city-select" id="city-select">
-        <option value="">— اختر المدينة —</option>
-      <option value="casablanca">الدار البيضاء — Casablanca</option>
-      <option value="rabat">الرباط — Rabat</option>
-      <option value="sale">سلا — Salé</option>
-      <option value="tanger">طنجة — Tanger</option>
-      <option value="tetouan">تطوان — Tétouan</option>
-      <option value="chefchaouen">شفشاون — Chefchaouen</option>
-      <option value="alhoceima">الحسيمة — Al Hoceïma</option>
-      <option value="larache">العرائش — Larache</option>
-      <option value="kenitra">القنيطرة — Kénitra</option>
-      <option value="settat">سطات — Settat</option>
-      <option value="eljadida">الجديدة — El Jadida</option>
-      <option value="meknes">مكناس — Meknès</option>
-      <option value="fes">فاس — Fès</option>
-      <option value="taza">تازة — Taza</option>
-      <option value="benimelal">بني ملال — Béni Mellal</option>
-      <option value="khenifra">خنيفرة — Khénifra</option>
-      <option value="khouribga">خريبكة — Khouribga</option>
-      <option value="marrakech">مراكش — Marrakech</option>
-      <option value="safi">آسفي — Safi</option>
-      <option value="essaouira">الصويرة — Essaouira</option>
-      <option value="agadir">أكادير — Agadir</option>
-      <option value="ouarzazate">ورززات — Ouarzazate</option>
-      <option value="oujda">وجدة — Oujda</option>
-      <option value="nador">الناظور — Nador</option>
-      <option value="ifrane">إفران — Ifrane</option>
-      </select>
-      <button class="explore-btn" onclick="goToChefs()">استكشاف المطابخ</button>
-    </div>
-    <button class="join-btn" onclick="openChefModal()">
-      👩‍🍳 أنت طاهية؟ انضمي إلينا
-    </button>
-    <div class="home-date" id="home-date"></div>
-    <div class="home-deco">🫕 🍲 🥘 🫖 🥐</div>
-  </div>
-</div>
-
-<!-- PAGE: CHEFS -->
-<div id="page-chefs" class="page">
-  <div class="topbar">
-    <button class="back-btn" onclick="showPage('home')">←</button>
-    <div class="topbar-info">
-      <div class="topbar-title">المطابخ المنزلية</div>
-      <div class="topbar-sub" id="chefs-city-label"></div>
-    </div>
-    <div class="topbar-brand">Ommi Food</div>
-  </div>
-  <div class="page-body">
-    <div class="city-pill" id="city-pill"></div>
-    <div id="chefs-list"></div>
-  </div>
-</div>
-
-<!-- PAGE: DETAIL -->
-<div id="page-detail" class="page">
-  <div class="topbar">
-    <button class="back-btn" onclick="showPage('chefs')">←</button>
-    <div class="topbar-info">
-      <div class="topbar-title" id="detail-topbar-name">ملف المطبخ</div>
-    </div>
-    <div class="topbar-brand">Ommi Food</div>
-  </div>
-  <div class="chef-hero">
-    <div class="chef-hero-avatar" id="d-avatar">👩‍🍳</div>
-    <div class="chef-hero-prefix" id="d-prefix">أمّي</div>
-    <div class="chef-hero-name" id="d-name"></div>
-    <div class="chef-hero-loc" id="d-loc"></div>
-    <div class="chef-hero-stars" id="d-stars"></div>
-    <span class="chef-hero-status" id="d-status"></span>
-  </div>
-  <div class="page-body">
-    <div class="bio-box" id="d-bio"></div>
-    <div class="section-label">قائمة الأطباق</div>
-    <div id="d-dishes"></div>
-    <div class="contact-box">
-      <div class="contact-title">📞 تواصل مباشر</div>
-      <button class="btn-call" onclick="callChef()">
-        📞 <span id="d-phone-label">اتصل بالطاهية</span>
-      </button>
-    </div>
-  </div>
-  <div class="page-footer">
+  <footer>
     <div class="footer-brand">Ommi Food</div>
-    <div class="footer-sub">أكل البيت — بحنان الأم</div>
-  </div>
-</div>
+    <div>من مطبخ أمهاتنا... كما لو كنت في البيت</div>
+    <div class="footer-city">الدار البيضاء أولًا. مدينة بعد مدينة.</div>
+  </footer>
 
-
-<!-- PAGE: ADMIN LOGIN -->
-<div id="page-admin-login" class="page">
-  <div class="login-box">
-    <div class="login-logo">Ommi Food</div>
-    <div class="login-sub">لوحة تحكم المدير</div>
-    <label class="login-label" for="admin-pass">كلمة المرور</label>
-    <input class="login-input" type="password" id="admin-pass" placeholder="••••••••"
-      onkeydown="if(event.key==='Enter') adminLogin()"/>
-    <div class="login-error" id="login-error"></div>
-    <button class="login-btn" onclick="adminLogin()">دخول</button>
-  </div>
-</div>
-
-<!-- PAGE: ADMIN DASHBOARD -->
-<div id="page-admin" class="page">
-  <div class="admin-topbar">
-    <div>
-      <div class="admin-topbar-logo">⚙️ Ommi Food — Admin</div>
-      <div class="admin-topbar-sub">لوحة التحكم</div>
-    </div>
-    <button class="admin-logout" onclick="adminLogout()">خروج</button>
-  </div>
-
-  <div class="admin-body">
-    <!-- KPIs -->
-    <div class="admin-kpis">
-      <div class="admin-kpi">
-        <div class="admin-kpi-label">إجمالي الطاهيات</div>
-        <div class="admin-kpi-value" id="kpi-total-chefs">—</div>
-      </div>
-      <div class="admin-kpi">
-        <div class="admin-kpi-label">طاهيات نشطة</div>
-        <div class="admin-kpi-value" id="kpi-active-chefs">—</div>
-        <div class="admin-kpi-sub">ظاهرات للزبائن</div>
-      </div>
-      <div class="admin-kpi">
-        <div class="admin-kpi-label">بانتظار الموافقة</div>
-        <div class="admin-kpi-value" id="kpi-pending-chefs">—</div>
-      </div>
-      <div class="admin-kpi">
-        <div class="admin-kpi-label">إجمالي الطلبات</div>
-        <div class="admin-kpi-value" id="kpi-total-orders">—</div>
-      </div>
-    </div>
-
-    <!-- TABS -->
-    <div class="admin-tabs">
-      <button class="admin-tab active" onclick="switchTab('chefs')">👩‍🍳 الطاهيات</button>
-      <button class="admin-tab" onclick="switchTab('orders')">📋 الطلبات</button>
-      <button class="admin-tab" onclick="switchTab('cities')">🗺️ المدن</button>
-    </div>
-
-    <!-- TAB: CHEFS -->
-    <div id="tab-chefs" class="admin-panel active">
-      <div class="admin-table">
-        <div class="admin-table-header chefs-header">
-          <span>الطاهية</span>
-          <span>المدينة</span>
-          <span>التخصص</span>
-          <span>الحالة</span>
-          <span>إجراءات</span>
-        </div>
-        <div id="admin-chefs-list">
-          <div class="admin-empty">جاري التحميل...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: ORDERS -->
-    <div id="tab-orders" class="admin-panel">
-      <div class="admin-table">
-        <div class="admin-table-header orders-header">
-          <span>رقم الطلب</span>
-          <span>الطبق / الطاهية</span>
-          <span>الزبون</span>
-          <span>المدينة</span>
-          <span>الحالة</span>
-        </div>
-        <div id="admin-orders-list">
-          <div class="admin-empty">جاري التحميل...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: CITIES -->
-    <div id="tab-cities" class="admin-panel">
-      <div class="city-stats" id="admin-cities-list"></div>
+  <div class="modal" id="comingModal" aria-hidden="true">
+    <div class="modal-card">
+      <button class="modal-close" data-close>×</button>
+      <span class="modal-icon">📍</span>
+      <h3 id="comingTitle">قريبًا في مدينتك</h3>
+      <p>نفتح Ommi Food مدينةً بعد مدينة حتى نحافظ على جودة المطابخ والخدمة. الدار البيضاء هي البداية.</p>
+      <button class="primary-btn" data-close>فهمت</button>
     </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+  <div class="modal" id="orderModal" aria-hidden="true">
+    <div class="modal-card wide">
+      <button class="modal-close" data-close>×</button>
+      <p class="eyebrow">طلب داخل Ommi Food</p>
+      <h3 id="orderChefName">أمّي فاطمة</h3>
+      <div id="dishList" class="dish-list"></div>
+      <div class="fulfilment">
+        <label><input type="radio" name="fulfilment" value="pickup" checked> أستلم بنفسي</label>
+        <label><input type="radio" name="fulfilment" value="delivery"> أريد التوصيل</label>
+      </div>
+      <input class="form-control" id="customerName" placeholder="اسمك" />
+      <input class="form-control" id="customerPhone" placeholder="رقم هاتفك" />
+      <input class="form-control" id="customerArea" placeholder="حيك في الدار البيضاء" />
+      <button class="primary-btn full" id="submitOrderBtn">تأكيد الطلب</button>
+      <p class="form-hint">لن يظهر رقم الطاهية لك. Ommi Food يتولى تمرير الطلب.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="joinModal" aria-hidden="true">
+    <div class="modal-card wide">
+      <button class="modal-close" data-close>×</button>
+      <p class="eyebrow">انضم إلى شبكة المطابخ المنزلية</p>
+      <h3>ابدأ باسمك، ونحن نصنع هويتك على المنصة</h3>
+      <div class="gender-row">
+        <button class="gender-btn active" data-gender="female">أنا طاهية · أمّي</button>
+        <button class="gender-btn" data-gender="male">أنا طاهٍ · عمّي</button>
+      </div>
+      <input class="form-control" id="joinName" placeholder="الاسم الأول" />
+      <div class="name-preview">سيظهر اسمك: <strong id="namePreview">أمّي فاطمة</strong></div>
+      <input class="form-control" id="joinPhone" placeholder="رقم الهاتف" />
+      <select class="form-control" id="joinCity">
+        <option value="casablanca">الدار البيضاء</option>
+      </select>
+      <input class="form-control" id="joinSpecialty" placeholder="تخصصك: كسكس، طاجين، حلويات..." />
+      <textarea class="form-control" id="joinBio" rows="4" placeholder="احكِ باختصار عن مطبخك وما يميّز طبخك"></textarea>
+      <button class="primary-btn full" id="submitJoinBtn">إرسال طلب الانضمام</button>
+      <p class="form-hint">طلبات الانضمام تخضع للمراجعة قبل الظهور.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
 </body>
 </html>
