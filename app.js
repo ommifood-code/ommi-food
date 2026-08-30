@@ -19,6 +19,20 @@ function showToast(text){toast.textContent=text;toast.classList.add('show');setT
 function openModal(el){el.classList.add('open');el.setAttribute('aria-hidden','false')}
 function closeModal(el){el.classList.remove('open');el.setAttribute('aria-hidden','true')}
 
+function clearJoinErrors(){
+  joinModal.querySelectorAll('.field-error').forEach(el=>el.remove());
+  joinModal.querySelectorAll('.field.invalid').forEach(el=>el.classList.remove('invalid'));
+  const consent=document.getElementById('joinConsent');
+  if(consent)consent.closest('label')?.classList.remove('consent-invalid');
+}
+function joinFieldError(id,message){
+  const field=document.getElementById(id);if(!field)return;
+  field.classList.add('invalid');
+  const error=document.createElement('div');error.className='field-error';error.textContent=message;
+  field.insertAdjacentElement('afterend',error);
+  field.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal'))));
 document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m)}));
 document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>showScreen('home')));
@@ -38,7 +52,7 @@ async function loadChefs(){
   grid.querySelectorAll('[data-chef]').forEach(el=>el.addEventListener('click',()=>openChef(el.dataset.chef)));
 }
 
-function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
+function escapeHtml(v){return String(v??'').replace(/[&<>'\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[ch]))}
 function normaliseDishes(raw){if(!raw)return[];if(Array.isArray(raw))return raw.map(d=>Array.isArray(d)?{name:d[0],price:d[1]}:d).filter(d=>d&&d.name);return[]}
 
 function openChef(id){
@@ -71,17 +85,26 @@ document.querySelectorAll('.gender').forEach(b=>b.addEventListener('click',()=>{
 document.getElementById('joinName').addEventListener('input',e=>{const cleaned=cleanName(e.target.value);if(e.target.value!==cleaned)e.target.value=cleaned});
 
 document.getElementById('submitJoinBtn').addEventListener('click',async()=>{
+  clearJoinErrors();
   const name=cleanName(document.getElementById('joinName').value);
   const phone=document.getElementById('joinPhone').value.trim();
   const area=document.getElementById('joinArea').value.trim();
   const bio=document.getElementById('joinBio').value.trim();
   const consent=document.getElementById('joinConsent').checked;
-  if(!name||!phone||!area){showToast('أكمل الاسم والهاتف والحي');return}
-  if(!consent){showToast('يجب الموافقة على شروط المنصة للمتابعة');return}
+
+  if(!name){joinFieldError('joinName','أدخلي اسمك الأول.');return}
+  if(!phone){joinFieldError('joinPhone','أدخلي رقم الهاتف.');return}
+  if(!/^0[5-7][0-9]{8}$/.test(phone)){joinFieldError('joinPhone','أدخلي رقم هاتف مغربي صحيحًا من 10 أرقام.');return}
+  if(!area){joinFieldError('joinArea','أدخلي الحي أو المنطقة.');return}
+  if(!consent){
+    const label=document.getElementById('joinConsent').closest('label');label?.classList.add('consent-invalid');
+    showToast('وافقي على شروط المنصة للمتابعة');return;
+  }
+
   const btn=document.getElementById('submitJoinBtn');btn.disabled=true;btn.textContent='جاري الإرسال...';
   const {error}=await db.from('chefs').insert({name,phone,city:'casablanca',area,bio:bio||null,gender:joinGender,status:'pending',available:false});
   btn.disabled=false;btn.textContent='إرسال طلب الانضمام';
-  if(error){showToast('تعذر إرسال طلب الانضمام');return}
-  document.getElementById('joinName').value='';document.getElementById('joinPhone').value='';document.getElementById('joinArea').value='';document.getElementById('joinBio').value='';document.getElementById('joinConsent').checked=false;
+  if(error){console.error('Join request failed:',error);showToast('تعذر إرسال الطلب. سنراجع إعدادات التسجيل.');return}
+  document.getElementById('joinName').value='';document.getElementById('joinPhone').value='';document.getElementById('joinArea').value='';document.getElementById('joinBio').value='';document.getElementById('joinConsent').checked=false;clearJoinErrors();
   closeModal(joinModal);showToast('تم إرسال طلبك للمراجعة');
 });
