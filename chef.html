@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>مساحتي | Ommi Food</title>
+  <link rel="stylesheet" href="style.css?v=20260830-chef1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <main class="chef-portal-shell">
+    <section class="chef-portal-card">
+      <div class="logo chef-portal-logo">Ommi Food</div>
+      <div id="portalLoading" class="empty-state loading">جاري التحقق من طلبك...</div>
+      <div id="portalPending" hidden>
+        <div class="flow-mark waiting-mark">…</div>
+        <h1>طلبك قيد المراجعة</h1>
+        <p>احتفظي بهذا الرابط وعودي إليه لاحقًا. بعد قبول الإدارة ستفتح لك هنا صفحة «ابني مطبخك» تلقائيًا.</p>
+        <div class="portal-link-note">هذا الرابط خاص بك، فلا تشاركيه مع الآخرين.</div>
+      </div>
+      <div id="portalRejected" hidden>
+        <h1>حالة الطلب</h1>
+        <p>لم يتم قبول طلب الانضمام حاليًا.</p>
+      </div>
+      <div id="portalAccepted" hidden>
+        <div class="portal-heading"><div><h1>ابني مطبخك</h1><p id="portalChefName"></p></div><span class="admin-badge waiting">مقبولة · المطبخ غير منشور</span></div>
+        <label for="portalBio">نبذة عنك وعن مطبخك</label>
+        <textarea id="portalBio" class="field" rows="4" placeholder="اكتبي نبذة قصيرة وواضحة"></textarea>
+        <label for="portalSpecialty">تخصص مطبخك</label>
+        <input id="portalSpecialty" class="field" placeholder="مثال: أطباق مغربية منزلية" />
+        <label for="portalDishes">الأطباق والأسعار</label>
+        <textarea id="portalDishes" class="field" rows="6" placeholder="كل طبق في سطر: كسكس | 45"></textarea>
+        <small class="portal-help">اكتبي كل طبق في سطر، ثم ضعي | بين اسم الطبق والسعر.</small>
+        <label for="portalDays">أيام العمل</label>
+        <input id="portalDays" class="field" placeholder="مثال: الإثنين إلى السبت" />
+        <label for="portalHours">أوقات استقبال الطلبات</label>
+        <input id="portalHours" class="field" placeholder="مثال: 10:00 - 18:00" />
+        <label for="portalFulfilment">طريقة تقديم الطلب</label>
+        <select id="portalFulfilment" class="field">
+          <option value="pickup">الاستلام من البيت</option>
+          <option value="delivery">التوصيل</option>
+          <option value="both">الاستلام أو التوصيل</option>
+        </select>
+        <label for="portalDeliveryBy">من يتكفل بالتوصيل؟</label>
+        <select id="portalDeliveryBy" class="field">
+          <option value="none">لا يوجد توصيل</option>
+          <option value="chef">الطاهية</option>
+          <option value="customer">الزبون</option>
+          <option value="partner">شريك خارجي</option>
+        </select>
+        <button id="portalSaveBtn" class="primary full">إرسال المطبخ للمراجعة</button>
+        <p class="join-note">لن يظهر مطبخك للزبائن قبل المراجعة النهائية من Ommi Food.</p>
+      </div>
+      <div id="portalError" class="admin-error" hidden></div>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="chef.js?v=20260830-chef1"></script>
+</body>
+</html>
