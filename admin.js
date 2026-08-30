@@ -8,11 +8,12 @@ const list=document.getElementById('adminChefList');
 const loginError=document.getElementById('adminLoginError');
 const toast=document.getElementById('toast');
 
-function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
+function escapeHtml(v){return String(v??'').replace(/[&<>'\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[ch]))}
 function prefix(g){return g==='m'?'عمّي':'أمّي'}
 function showToast(text){toast.textContent=text;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)}
 function membershipLabel(v){return v==='honorary'?'شرفية':v==='paid'?'مدفوعة':'بدون عضوية'}
-function statusLabel(v){return v==='pending'?'قيد المراجعة':v==='active'?'مقبول':v==='rejected'?'مرفوض':v}
+function statusLabel(c){if(c.status==='pending')return'قيد المراجعة';if(c.status==='rejected')return'مرفوض';if(c.status==='active'&&c.membership_status==='suspended')return'معلّق';if(c.status==='active'&&c.membership_status==='active')return'مفعّل';return c.status||'—'}
+function isPublic(c){return c.status==='active'&&c.membership_status==='active'&&['honorary','paid'].includes(c.membership_type)}
 
 async function verifyAdmin(){
   const {data:{session}}=await db.auth.getSession();
@@ -38,22 +39,39 @@ async function loadAdminChefs(){
   renderChefs(data||[]);
 }
 
+function lifecycleActions(c){
+  if(c.status==='pending'){
+    return `<div class="admin-actions"><button class="primary" data-approve="honorary">قبول · عضوية شرفية</button><button class="primary" data-approve="paid">قبول · عضوية مدفوعة</button><button class="admin-danger" data-reject>رفض</button></div>`;
+  }
+  if(c.status==='active'){
+    const membershipButtons=`<button class="admin-secondary" data-membership="honorary" ${c.membership_type==='honorary'?'disabled':''}>عضوية شرفية</button><button class="admin-secondary" data-membership="paid" ${c.membership_type==='paid'?'disabled':''}>عضوية مدفوعة</button>`;
+    const stateButton=c.membership_status==='suspended'
+      ?'<button class="primary" data-reactivate>إعادة التفعيل والظهور</button>'
+      :'<button class="admin-danger" data-suspend>تعليق وإخفاء</button>';
+    return `<div class="admin-actions">${membershipButtons}${stateButton}</div>`;
+  }
+  return '';
+}
+
 function renderChefs(rows){
   const pending=rows.filter(c=>c.status==='pending').length;
-  const active=rows.filter(c=>c.status==='active'&&c.membership_status==='active').length;
+  const active=rows.filter(c=>isPublic(c)).length;
   document.getElementById('pendingCount').textContent=pending;
   document.getElementById('activeCount').textContent=active;
   if(!rows.length){list.innerHTML='<div class="empty-state"><strong>لا توجد طلبات بعد.</strong><span>طلبات الانضمام الجديدة ستظهر هنا.</span></div>';return}
   list.innerHTML=rows.map(c=>`<article class="admin-chef-card" data-id="${c.id}">
-    <div class="admin-chef-top"><div><h3>${prefix(c.gender)} ${escapeHtml(c.name)}</h3><p>${escapeHtml(c.specialty||'بدون تخصص')}</p></div><span class="admin-badge ${escapeHtml(c.status)}">${statusLabel(c.status)}</span></div>
-    <div class="admin-details"><span><b>الهاتف:</b> ${escapeHtml(c.phone||'—')}</span><span><b>المدينة:</b> ${escapeHtml(c.city||'—')}</span><span><b>العضوية:</b> ${membershipLabel(c.membership_type)}</span></div>
+    <div class="admin-chef-top"><div><h3>${prefix(c.gender)} ${escapeHtml(c.name)}</h3><p>${escapeHtml(c.specialty||'بدون تخصص')}</p></div><span class="admin-badge ${escapeHtml(c.status)}">${statusLabel(c)}</span></div>
+    <div class="admin-details"><span><b>الهاتف:</b> ${escapeHtml(c.phone||'—')}</span><span><b>المدينة:</b> ${escapeHtml(c.city||'—')}</span><span><b>العضوية:</b> ${membershipLabel(c.membership_type)}</span><span><b>للزبائن:</b> ${isPublic(c)?'ظاهر':'مخفي'}</span></div>
     ${c.bio?`<p class="admin-bio">${escapeHtml(c.bio)}</p>`:''}
     ${c.rejection_reason?`<p class="admin-reason"><b>سبب الرفض:</b> ${escapeHtml(c.rejection_reason)}</p>`:''}
-    ${c.status==='pending'?`<div class="admin-actions"><button class="primary" data-approve="honorary">قبول · عضوية شرفية</button><button class="primary" data-approve="paid">قبول · عضوية مدفوعة</button><button class="admin-danger" data-reject>رفض</button></div>`:''}
+    ${lifecycleActions(c)}
   </article>`).join('');
 
   list.querySelectorAll('[data-approve]').forEach(btn=>btn.addEventListener('click',()=>approveChef(btn.closest('[data-id]').dataset.id,btn.dataset.approve,btn)));
   list.querySelectorAll('[data-reject]').forEach(btn=>btn.addEventListener('click',()=>rejectChef(btn.closest('[data-id]').dataset.id,btn)));
+  list.querySelectorAll('[data-membership]').forEach(btn=>btn.addEventListener('click',()=>changeMembership(btn.closest('[data-id]').dataset.id,btn.dataset.membership,btn)));
+  list.querySelectorAll('[data-suspend]').forEach(btn=>btn.addEventListener('click',()=>suspendChef(btn.closest('[data-id]').dataset.id,btn)));
+  list.querySelectorAll('[data-reactivate]').forEach(btn=>btn.addEventListener('click',()=>reactivateChef(btn.closest('[data-id]').dataset.id,btn)));
 }
 
 async function approveChef(id,type,btn){
@@ -75,6 +93,34 @@ async function rejectChef(id,btn){
   btn.disabled=false;
   if(error){showToast('تعذر رفض الملف');return}
   showToast('تم رفض الطلب');await loadAdminChefs();
+}
+
+async function changeMembership(id,type,btn){
+  const label=type==='honorary'?'الشرفية':'المدفوعة';
+  if(!confirm(`تغيير العضوية إلى ${label}؟`))return;
+  btn.disabled=true;
+  const {error}=await db.rpc('set_chef_membership',{chef_id:id,new_membership_type:type});
+  btn.disabled=false;
+  if(error){showToast('تعذر تغيير العضوية');return}
+  showToast(`تم تغيير العضوية إلى ${label}`);await loadAdminChefs();
+}
+
+async function suspendChef(id,btn){
+  if(!confirm('تعليق هذه الطاهية وإخفاؤها فورًا عن الزبائن؟'))return;
+  btn.disabled=true;
+  const {error}=await db.rpc('suspend_chef',{chef_id:id});
+  btn.disabled=false;
+  if(error){showToast('تعذر تعليق الحساب');return}
+  showToast('تم تعليق الحساب وإخفاؤه عن الزبائن');await loadAdminChefs();
+}
+
+async function reactivateChef(id,btn){
+  if(!confirm('إعادة تفعيل هذه الطاهية وإظهارها للزبائن؟'))return;
+  btn.disabled=true;
+  const {error}=await db.rpc('reactivate_chef',{chef_id:id});
+  btn.disabled=false;
+  if(error){showToast('تعذر إعادة التفعيل');return}
+  showToast('تمت إعادة التفعيل وأصبح الملف ظاهرًا للزبائن');await loadAdminChefs();
 }
 
 document.getElementById('adminLoginBtn').addEventListener('click',async()=>{
