@@ -28,95 +28,60 @@ async function loadChefs(){
   const grid=document.getElementById('chefGrid');
   grid.innerHTML='<div class="empty-state loading">جاري تحميل المطابخ...</div>';
   const {data,error}=await db.from('chefs').select('id,name,gender,city,specialty,bio,rating,available,status,dishes,area').eq('city','casablanca').eq('status','active').order('created_at',{ascending:false});
-  if(error){
-    grid.innerHTML='<div class="empty-state"><strong>تعذر الاتصال بقاعدة البيانات.</strong><span>سنصلح الاتصال قبل استقبال التسجيلات.</span></div>';
-    return;
-  }
+  if(error){grid.innerHTML='<div class="empty-state"><strong>تعذر الاتصال بقاعدة البيانات.</strong><span>سنصلح الاتصال قبل استقبال التسجيلات.</span></div>';return}
   chefsCache=data||[];
   if(!chefsCache.length){
     grid.innerHTML='<div class="empty-state"><strong>لا توجد مطابخ معتمدة بعد.</strong><span>أول الملفات ستظهر هنا فور اعتمادها من Ommi Food.</span><button class="join inline-join" data-open-empty>انضمي إلى Ommi Food</button></div>';
-    const b=grid.querySelector('[data-open-empty]');if(b)b.addEventListener('click',()=>openModal(joinModal));
-    return;
+    const b=grid.querySelector('[data-open-empty]');if(b)b.addEventListener('click',()=>openModal(joinModal));return;
   }
   grid.innerHTML=chefsCache.map(c=>`<article class="chef-card" data-chef="${c.id}"><div class="chef-main"><div class="chef-name">${prefix(c.gender)} ${escapeHtml(c.name)}</div><div class="chef-specialty">${escapeHtml(c.specialty||'')}</div><div class="chef-meta"><span>${escapeHtml(c.area||'الدار البيضاء')}</span>${c.rating?`<span>★ ${Number(c.rating).toFixed(1)}</span>`:''}<span class="status ${c.available?'available':'busy'}">${c.available?'متاحة الآن':'غير متاحة الآن'}</span></div></div><div class="arrow">←</div></article>`).join('');
   grid.querySelectorAll('[data-chef]').forEach(el=>el.addEventListener('click',()=>openChef(el.dataset.chef)));
 }
 
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
-
-function normaliseDishes(raw){
-  if(!raw)return[];
-  if(Array.isArray(raw))return raw.map(d=>Array.isArray(d)?{name:d[0],price:d[1]}:d).filter(d=>d&&d.name);
-  return[];
-}
+function normaliseDishes(raw){if(!raw)return[];if(Array.isArray(raw))return raw.map(d=>Array.isArray(d)?{name:d[0],price:d[1]}:d).filter(d=>d&&d.name);return[]}
 
 function openChef(id){
-  activeChef=chefsCache.find(c=>String(c.id)===String(id));
-  if(!activeChef)return;
-  activeDish=null;
+  activeChef=chefsCache.find(c=>String(c.id)===String(id));if(!activeChef)return;activeDish=null;
   document.getElementById('orderChefName').textContent=`${prefix(activeChef.gender)} ${activeChef.name}`;
   document.getElementById('orderChefArea').textContent=activeChef.area||'الدار البيضاء';
-  const dishes=normaliseDishes(activeChef.dishes);
-  const list=document.getElementById('dishList');
-  if(!dishes.length){
-    list.innerHTML='<div class="empty-dishes">هذه الطاهية لم تنشر أطباقها بعد.</div>';
-  }else{
-    list.innerHTML=dishes.map((d,i)=>`<button class="dish-option" data-dish="${i}"><span>${escapeHtml(d.name)}</span><strong>${escapeHtml(d.price??'')}</strong></button>`).join('');
-    list.querySelectorAll('[data-dish]').forEach(b=>b.addEventListener('click',()=>{list.querySelectorAll('.dish-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');activeDish=dishes[Number(b.dataset.dish)]}));
-  }
+  const dishes=normaliseDishes(activeChef.dishes);const list=document.getElementById('dishList');
+  if(!dishes.length){list.innerHTML='<div class="empty-dishes">هذه الطاهية لم تنشر أطباقها بعد.</div>'}
+  else{list.innerHTML=dishes.map((d,i)=>`<button class="dish-option" data-dish="${i}"><span>${escapeHtml(d.name)}</span><strong>${escapeHtml(d.price??'')}</strong></button>`).join('');list.querySelectorAll('[data-dish]').forEach(b=>b.addEventListener('click',()=>{list.querySelectorAll('.dish-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');activeDish=dishes[Number(b.dataset.dish)]}))}
   openModal(orderModal);
 }
 
 document.getElementById('discoverBtn').addEventListener('click',async()=>{
-  const city=citySelect.value;
-  if(!city){showToast('اختر المدينة أولًا');return}
-  if(city!=='casablanca'){
-    const name=citySelect.options[citySelect.selectedIndex].text.split(' — ')[0];
-    document.getElementById('comingTitle').textContent=`قريبًا في ${name}`;
-    openModal(comingModal);return;
-  }
-  document.getElementById('cityTitle').textContent='الدار البيضاء';
-  showScreen('chefs');
-  await loadChefs();
+  const city=citySelect.value;if(!city){showToast('اختر المدينة أولًا');return}
+  if(city!=='casablanca'){const name=citySelect.options[citySelect.selectedIndex].text.split(' — ')[0];document.getElementById('comingTitle').textContent=`قريبًا في ${name}`;openModal(comingModal);return}
+  document.getElementById('cityTitle').textContent='الدار البيضاء';showScreen('chefs');await loadChefs();
 });
 
 document.getElementById('submitOrderBtn').addEventListener('click',async()=>{
-  if(!activeChef){return}
-  if(!activeDish){showToast('اختر طبقًا أولًا');return}
-  const name=document.getElementById('customerName').value.trim();
-  const phone=document.getElementById('customerPhone').value.trim();
-  const area=document.getElementById('customerArea').value.trim();
+  if(!activeChef)return;if(!activeDish){showToast('اختر طبقًا أولًا');return}
+  const name=document.getElementById('customerName').value.trim();const phone=document.getElementById('customerPhone').value.trim();const area=document.getElementById('customerArea').value.trim();
   if(!name||!phone||!area){showToast('أكمل معلومات الطلب');return}
-  const ref='OF-'+Math.floor(10000+Math.random()*90000);
-  const fulfilment=document.querySelector('input[name="fulfilment"]:checked')?.value||'pickup';
+  const ref='OF-'+Math.floor(10000+Math.random()*90000);const fulfilment=document.querySelector('input[name="fulfilment"]:checked')?.value||'pickup';
   const {error}=await db.from('orders').insert({order_ref:ref,chef_id:activeChef.id,chef_name:`${prefix(activeChef.gender)} ${activeChef.name}`,dish_name:activeDish.name,customer_name:name,customer_phone:phone,customer_address:area,status:'pending',fulfilment_type:fulfilment});
-  if(error){showToast('تعذر تسجيل الطلب حاليًا');return}
-  closeModal(orderModal);showToast(`تم تسجيل الطلب ${ref}`);
+  if(error){showToast('تعذر تسجيل الطلب حاليًا');return}closeModal(orderModal);showToast(`تم تسجيل الطلب ${ref}`);
 });
 
-document.querySelectorAll('.gender').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.gender').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');joinGender=b.dataset.gender==='male'?'m':'f';updateNamePreview();
-}));
+document.querySelectorAll('.gender').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.gender').forEach(x=>x.classList.remove('active'));b.classList.add('active');joinGender=b.dataset.gender==='male'?'m':'f'}));
 
-function updateNamePreview(){
-  const input=document.getElementById('joinName');
-  const cleaned=cleanName(input.value);
-  if(input.value!==cleaned)input.value=cleaned;
-  document.getElementById('namePreview').textContent=cleaned?`${prefix(joinGender)} ${cleaned}`:`${prefix(joinGender)} + اسمك`;
-}
-document.getElementById('joinName').addEventListener('input',updateNamePreview);
+document.getElementById('joinName').addEventListener('input',e=>{const cleaned=cleanName(e.target.value);if(e.target.value!==cleaned)e.target.value=cleaned});
 
 document.getElementById('submitJoinBtn').addEventListener('click',async()=>{
   const name=cleanName(document.getElementById('joinName').value);
   const phone=document.getElementById('joinPhone').value.trim();
-  const specialty=document.getElementById('joinSpecialty').value.trim();
+  const area=document.getElementById('joinArea').value.trim();
   const bio=document.getElementById('joinBio').value.trim();
-  if(!name||!phone||!specialty){showToast('أكمل الاسم والهاتف والتخصص');return}
+  const consent=document.getElementById('joinConsent').checked;
+  if(!name||!phone||!area){showToast('أكمل الاسم والهاتف والحي');return}
+  if(!consent){showToast('يجب الموافقة على شروط المنصة للمتابعة');return}
   const btn=document.getElementById('submitJoinBtn');btn.disabled=true;btn.textContent='جاري الإرسال...';
-  const {error}=await db.from('chefs').insert({name,phone,city:'casablanca',specialty,bio:bio||null,gender:joinGender,status:'pending',available:false});
+  const {error}=await db.from('chefs').insert({name,phone,city:'casablanca',area,bio:bio||null,gender:joinGender,status:'pending',available:false});
   btn.disabled=false;btn.textContent='إرسال طلب الانضمام';
   if(error){showToast('تعذر إرسال طلب الانضمام');return}
-  document.getElementById('joinName').value='';document.getElementById('joinPhone').value='';document.getElementById('joinSpecialty').value='';document.getElementById('joinBio').value='';updateNamePreview();
+  document.getElementById('joinName').value='';document.getElementById('joinPhone').value='';document.getElementById('joinArea').value='';document.getElementById('joinBio').value='';document.getElementById('joinConsent').checked=false;
   closeModal(joinModal);showToast('تم إرسال طلبك للمراجعة');
 });
