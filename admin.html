@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>إدارة Ommi Food</title>
-  <link rel="stylesheet" href="style.css?v=20260830-admin3" />
+  <link rel="stylesheet" href="style.css?v=20260905-1" />
+  <link rel="stylesheet" href="dish-images.css?v=20260905-1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="admin-page">
@@ -20,19 +21,13 @@
       <div id="adminLoginError" class="admin-error" aria-live="polite"></div>
     </section>
     <section id="adminDashboard" class="admin-dashboard" hidden>
-      <header class="admin-header">
-        <div><strong>إدارة Ommi Food</strong><span id="adminIdentity"></span></div>
-        <button id="adminLogoutBtn" class="admin-secondary">تسجيل الخروج</button>
-      </header>
-      <div class="admin-summary">
-        <div><strong id="pendingCount">0</strong><span>طلبات قيد المراجعة</span></div>
-        <div><strong id="activeCount">0</strong><span>مطابخ منشورة</span></div>
-      </div>
+      <header class="admin-header"><div><strong>إدارة Ommi Food</strong><span id="adminIdentity"></span></div><button id="adminLogoutBtn" class="admin-secondary">تسجيل الخروج</button></header>
+      <div class="admin-summary"><div><strong id="pendingCount">0</strong><span>طلبات قيد المراجعة</span></div><div><strong id="activeCount">0</strong><span>مطابخ منشورة</span></div></div>
       <div class="admin-section-head"><h2>الطاهيات والطهاة</h2><button id="adminRefreshBtn" class="admin-secondary">تحديث</button></div>
       <div id="adminChefList" class="admin-chef-list"></div>
     </section>
   </main>
   <div id="toast" class="toast"></div>
-  <script src="admin.js?v=20260830-admin3"></script>
+  <script src="admin.js?v=20260905-1"></script>
 </body>
 </html>
