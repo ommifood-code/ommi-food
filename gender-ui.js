@@ -6,21 +6,40 @@ function canonicalChefGender(g){
   return '';
 }
 function isMaleChefGender(g){return canonicalChefGender(g)==='m'}
-prefix=function(g){return isMaleChefGender(g)?'عمّي':'أمّي'};
+prefix=function(g){const c=canonicalChefGender(g);return c==='m'?'عمّي':c==='f'?'أمّي':''};
 
-/* Keep the active gender button and the value sent to chef_register in strict sync. */
+/* No gender is selected by default. Registration must use an explicit user choice. */
+joinGender='';
 document.querySelectorAll('.gender').forEach(button=>{
+  button.classList.remove('active');
+  button.setAttribute('aria-pressed','false');
   button.addEventListener('click',()=>{
+    document.querySelectorAll('.gender').forEach(x=>{
+      x.classList.remove('active');
+      x.setAttribute('aria-pressed','false');
+    });
+    button.classList.add('active');
+    button.setAttribute('aria-pressed','true');
     joinGender=button.dataset.gender==='male'?'m':'f';
   },true);
 });
-document.getElementById('submitJoinBtn')?.addEventListener('click',()=>{
+
+/* Capture the submit before dish-images.js onclick. If no choice exists, stop registration. */
+document.getElementById('submitJoinBtn')?.addEventListener('click',event=>{
   const selected=document.querySelector('.gender.active');
-  joinGender=selected?.dataset.gender==='male'?'m':'f';
+  if(!selected){
+    joinGender='';
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showToast('حددي أولًا: أنثى · أمّي أم ذكر · عمّي.');
+    return;
+  }
+  joinGender=selected.dataset.gender==='male'?'m':'f';
 },true);
 
 function applyChefGenderUi(g){
-  const male=isMaleChefGender(g);
+  const c=canonicalChefGender(g);
+  const male=c==='m';
   const topbar=document.querySelector('#buildKitchen .topbar span');
   if(topbar)topbar.textContent=male?'أنت الآن داخل Ommi Food':'أنتِ الآن داخل Ommi Food';
   const firstStep=document.querySelector('#buildKitchen .builder-step:nth-of-type(2) p');
@@ -45,9 +64,10 @@ function applyChefGenderUi(g){
 
 const _openBuilder=openBuilder;
 openBuilder=function(){
-  currentChefGender=canonicalChefGender(currentChefGender)||'f';
+  currentChefGender=canonicalChefGender(currentChefGender);
   _openBuilder();
   applyChefGenderUi(currentChefGender);
-  document.getElementById('builderKitchenName').textContent=`مطبخ ${prefix(currentChefGender)} ${currentChefName}`;
+  const titlePrefix=prefix(currentChefGender);
+  document.getElementById('builderKitchenName').textContent=`مطبخ ${titlePrefix?titlePrefix+' ':''}${currentChefName}`;
   updatePreview();
 };
