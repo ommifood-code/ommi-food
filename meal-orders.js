@@ -83,9 +83,10 @@ async function submitMealOrder(button){
  const args={p_offer_id:selectedMealOffer.id,p_quantity:quantity,p_fulfilment:document.getElementById('mealFulfilment').value,p_customer:{name:document.getElementById('customerName').value.trim(),phone:document.getElementById('customerPhone').value.trim(),area:document.getElementById('mealDeliveryArea').value,address:document.getElementById('customerArea').value.trim(),notes:document.getElementById('mealNotes').value.trim()}};
  // Persist the request capability BEFORE the network call, so a lost response is recoverable.
  const signature=JSON.stringify(args);if(!mealRequest||mealRequest.signature!==signature){mealRequest={signature,token:newMealToken()};const receipts=readMealReceipts();receipts.unshift({token:mealRequest.token,ref:'طلب قيد الإرسال'});localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(receipts.slice(0,100)));}
- const result=await mealRpc('place_meal_order',{...args,p_access_token:mealRequest.token});
- const receipts=readMealReceipts();const record=receipts.find(r=>r.token===mealRequest.token);if(record)record.ref=result.order_ref;localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(receipts));
- closeModal(orderModal);showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(mealRequest.token);
+ const request=mealRequest;
+ const result=await mealRpc('place_meal_order',{...args,p_access_token:request.token});
+ const receipts=readMealReceipts();const record=receipts.find(r=>r.token===request.token);if(record)record.ref=result.order_ref;localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(receipts));
+ closeModal(orderModal);showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(request.token);
  });
 }
 async function openCustomerMealOrder(token){

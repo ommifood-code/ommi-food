@@ -17,7 +17,7 @@ alter table public.meal_offers enable row level security;
 create index meal_offers_chef_idx on public.meal_offers(chef_id);
 create policy meal_offers_public on public.meal_offers for select to anon,authenticated
  using(active and order_until>now() and exists(select 1 from public.chefs c where c.id=chef_id
- and c.status='active' and c.phone_verified and c.membership_status='active' and c.membership_type in ('honorary','paid')));
+ and c.status='active'))); -- chefs RLS enforces verified phone and active membership
 grant select on public.meal_offers to anon,authenticated;
 revoke insert,update,delete on public.meal_offers from anon,authenticated;
 
