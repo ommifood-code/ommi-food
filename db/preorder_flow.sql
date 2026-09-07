@@ -4,7 +4,7 @@ create table public.meal_offers (
  dish_name text not null, price numeric(10,2) not null check(price>0 and price<=10000), image_url text,
  portion text not null check(length(portion) between 1 and 300),
  ingredients text not null check(length(ingredients) between 1 and 2000),
- allergens text not null check(length(allergens) between 1 and 1000),
+ allergens text check(length(allergens) between 1 and 1000),
  quantity integer not null check(quantity between 1 and 500), allocated integer not null default 0,
  order_until timestamptz not null, ready_at timestamptz not null,
  fulfilment_type text not null check(fulfilment_type in ('pickup','delivery','both')),

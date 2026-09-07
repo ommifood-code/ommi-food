@@ -34,7 +34,6 @@ async function openMealOfferForm(c){
  <label>الطبق<select name="dish" class="field">${dishes.map((d,i)=>`<option value="${i}">${escapeHtml(d.name)} — ${escapeHtml(d.price)} درهم للحصة</option>`).join('')}</select></label>
  <label>ماذا تتضمن الحصة؟ ولِكم شخصًا تكفي؟<input name="portion" class="field" required maxlength="300" placeholder="مثال: حصة لشخص واحد مع الخضر واللحم"></label>
  <label>المكونات الرئيسية<textarea name="ingredients" class="field" required maxlength="2000"></textarea></label>
- <label>مسببات الحساسية وملاحظات التحضير<textarea name="allergens" class="field" required maxlength="1000" placeholder="اذكر المواد المعروفة، أو عدم التأكد؛ لا تضمن خلو الطعام دون تحقق"></textarea></label>
  <label>عدد الحصص<input name="quantity" type="number" min="1" max="500" value="5" class="field" required></label>
  <label>آخر أجل للطلب وقبوله<input name="order_until" type="datetime-local" class="field" required></label>
  <label>موعد جاهزية الوجبة<input name="ready_at" type="datetime-local" class="field" required></label>
@@ -62,7 +61,7 @@ async function openMealOrdering(chef){
  if(activeChef?.id!==chef.id)return;if(error){list.innerHTML='<p>تعذر تحميل الوجبات. أغلق النافذة وحاول مجددًا.</p>';return;}
  mealOffers=(data||[]).filter(o=>o.quantity>o.allocated);
  list.innerHTML=mealOffers.length?'':'<p>لا توجد وجبات متاحة للحجز حاليًا من هذا المطبخ.</p>';
- mealOffers.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='dish-option meal-card';const img=safeImageUrl(o.image_url);b.innerHTML=`${img?`<img class="dish-option-image" src="${escapeHtml(img)}" alt="${escapeHtml(o.dish_name)}">`:''}<span><strong>${escapeHtml(o.dish_name)} — ${mealMoney(o.price)}</strong><span>${escapeHtml(o.portion)}</span><span>جاهزة: ${mealDate(o.ready_at)}</span><span>آخر أجل: ${mealDate(o.order_until)}</span><span>المتاح للتأكيد: ${o.quantity-o.allocated} حصة</span><span>المكونات: ${escapeHtml(o.ingredients)}</span><span>الحساسية والتحضير: ${escapeHtml(o.allergens)}</span></span>`;b.onclick=()=>selectMealOffer(o,b);list.append(b);});
+ mealOffers.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='dish-option meal-card';const img=safeImageUrl(o.image_url);b.innerHTML=`${img?`<img class="dish-option-image" src="${escapeHtml(img)}" alt="${escapeHtml(o.dish_name)}">`:''}<span><strong>${escapeHtml(o.dish_name)} — ${mealMoney(o.price)}</strong><span>${escapeHtml(o.portion)}</span><span>جاهزة: ${mealDate(o.ready_at)}</span><span>آخر أجل: ${mealDate(o.order_until)}</span><span>المتاح للتأكيد: ${o.quantity-o.allocated} حصة</span><span>المكونات: ${escapeHtml(o.ingredients)}</span></span>`;b.onclick=()=>selectMealOffer(o,b);list.append(b);});
 }
 function selectMealOffer(o,button){
  selectedMealOffer=o;mealRequest=null;document.querySelectorAll('#dishList .selected').forEach(e=>e.classList.remove('selected'));button.classList.add('selected');

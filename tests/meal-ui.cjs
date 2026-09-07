@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
 const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'https://test.invalid',runScripts:'outside-only'});
 const w=dom.window,ctx=dom.getInternalVMContext();
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
-const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,portion:'حصة لشخص',ingredients:'قمح وخضر',allergens:'قمح',quantity:5,allocated:0,active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
+const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:5,allocated:0,active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
 const calls=[];let placed;
 const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
  case 'chef_session_status':return{data:[chef]};
@@ -39,7 +39,7 @@ function field(id,value){w.document.getElementById(id).value=value;}
  await w.openMealOfferForm(chef);
  assert.match(w.document.querySelector('.offer-meaning').textContent,/ليست طبقًا جديدًا/);
  const form=w.document.getElementById('mealOfferForm');
- for(const[k,v]of Object.entries({portion:'حصة لشخص',ingredients:'قمح وخضر',allergens:'قمح',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
+ for(const[k,v]of Object.entries({portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'myMealOffers');
  assert.match(w.document.querySelector('.offers-meaning').textContent,/ليست قائمة أطباق مطبخك الدائمة/);
