@@ -33,14 +33,6 @@ openMyMealOffers=async function(){
  box.prepend(uxInfo('offers-meaning','وجباتي المتاحة للحجز','هذه ليست قائمة أطباق مطبخك الدائمة. هنا تظهر فقط الوجبات التي حددت لها موعدًا وكمية لاستقبال طلبات الزبائن.'));
 };
 
-const _openMealOrdering=openMealOrdering;
-openMealOrdering=async function(chef){
- await _openMealOrdering(chef);
- const fields=document.getElementById('mealOrderFields');if(!fields)return;
- let note=fields.querySelector('.pending-order-warning');
- if(!note){note=uxInfo('pending-order-warning','طلبك بانتظار قبول المطبخ','إرسال الطلب لا يعني تأكيده. لا تُحجز الحصص إلا عندما يقبل المطبخ الطلب. تابع الحالة من «طلباتي» واضغط «تحديث» لرؤية آخر تغيير.');fields.prepend(note);}
-};
-
 if(typeof openChefMealOrders==='function'){
  const _openChefMealOrders=openChefMealOrders;
  openChefMealOrders=async function(){

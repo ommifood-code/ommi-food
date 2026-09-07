@@ -47,8 +47,9 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.equal(payload.ready_at,'2030-09-09T12:00:00.000Z');
  assert.equal(payload.fulfilment_type,'pickup');
  await w.openMealOrdering(chef);
- assert.equal(w.document.getElementById('mealOrderFields').hidden,true);
- w.document.querySelector('#dishList button').click();
+ assert.equal(w.document.querySelector('.screen.active').id,'orderModal');
+ assert.equal(w.document.getElementById('orderModal').classList.contains('modal'),false);
+ assert.equal(w.document.querySelector('#dishList button').getAttribute('aria-pressed'),'true');
  assert.equal(w.document.getElementById('mealOrderFields').hidden,false);
  assert.match(w.document.querySelector('.pending-order-warning').textContent,/بانتظار قبول المطبخ/);
  field('mealQuantity','2');field('mealFulfilment','delivery');w.updateMealTotal();

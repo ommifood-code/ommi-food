@@ -56,15 +56,16 @@ let selectedMealOffer=null,mealOffers=[],mealRequest=null;
 async function openMealOrdering(chef){
  activeChef=chef;selectedMealOffer=null;mealRequest=null;
  document.getElementById('orderChefName').textContent=`${prefix(chef.gender)} ${chef.name}`;document.getElementById('orderChefArea').textContent=chef.area||'الدار البيضاء';
- const list=document.getElementById('dishList');list.innerHTML='<p>جاري تحميل الوجبات المتاحة للحجز...</p>';document.getElementById('mealOrderFields').hidden=true;openModal(orderModal);
+ const list=document.getElementById('dishList');list.innerHTML='<p>جاري تحميل الوجبات المتاحة للحجز...</p>';document.getElementById('mealOrderFields').hidden=true;showScreen('orderModal');
  const{data,error}=await db.from('meal_offers').select('*').eq('chef_id',chef.id).eq('active',true).gt('order_until',new Date().toISOString()).order('ready_at');
- if(activeChef?.id!==chef.id)return;if(error){list.innerHTML='<p>تعذر تحميل الوجبات. أغلق النافذة وحاول مجددًا.</p>';return;}
+ if(activeChef?.id!==chef.id)return;if(error){list.innerHTML='<p>تعذر تحميل الوجبات. ارجع إلى قائمة المطابخ وحاول مجددًا.</p>';return;}
  mealOffers=(data||[]).filter(o=>o.quantity>o.allocated);
  list.innerHTML=mealOffers.length?'':'<p>لا توجد وجبات متاحة للحجز حاليًا من هذا المطبخ.</p>';
- mealOffers.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='dish-option meal-card';const img=safeImageUrl(o.image_url);b.innerHTML=`${img?`<img class="dish-option-image" src="${escapeHtml(img)}" alt="${escapeHtml(o.dish_name)}">`:''}<span><strong>${escapeHtml(o.dish_name)} — ${mealMoney(o.price)}</strong><span>${escapeHtml(o.portion)}</span><span>جاهزة: ${mealDate(o.ready_at)}</span><span>آخر أجل: ${mealDate(o.order_until)}</span><span>المتاح للتأكيد: ${o.quantity-o.allocated} حصة</span><span>المكونات: ${escapeHtml(o.ingredients)}</span></span>`;b.onclick=()=>selectMealOffer(o,b);list.append(b);});
+ mealOffers.forEach(o=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');b.className='dish-option meal-card';const img=safeImageUrl(o.image_url);b.innerHTML=`${img?`<img class="dish-option-image" src="${escapeHtml(img)}" alt="${escapeHtml(o.dish_name)}">`:''}<span><strong>${escapeHtml(o.dish_name)} — ${mealMoney(o.price)}</strong><span>${escapeHtml(o.portion)}</span><span>جاهزة: ${mealDate(o.ready_at)}</span><span>آخر أجل: ${mealDate(o.order_until)}</span><span>المتاح للتأكيد: ${o.quantity-o.allocated} حصة</span><span>المكونات: ${escapeHtml(o.ingredients)}</span></span>`;b.onclick=()=>selectMealOffer(o,b);list.append(b);});
+ if(mealOffers.length)selectMealOffer(mealOffers[0],list.querySelector('button'));
 }
 function selectMealOffer(o,button){
- selectedMealOffer=o;mealRequest=null;document.querySelectorAll('#dishList .selected').forEach(e=>e.classList.remove('selected'));button.classList.add('selected');
+ selectedMealOffer=o;mealRequest=null;document.querySelectorAll('#dishList .selected').forEach(e=>{e.classList.remove('selected');e.setAttribute('aria-pressed','false');});button.classList.add('selected');button.setAttribute('aria-pressed','true');
  const fields=document.getElementById('mealOrderFields');fields.hidden=false;
  const select=document.getElementById('mealFulfilment');select.innerHTML=(o.fulfilment_type==='both'?['pickup','delivery']:[o.fulfilment_type]).map(v=>`<option value="${v}">${v==='pickup'?'الاستلام من المطبخ':'التوصيل'}</option>`).join('');
  const quantity=document.getElementById('mealQuantity');quantity.max=Math.min(50,o.quantity-o.allocated);quantity.value=1;
@@ -85,7 +86,7 @@ async function submitMealOrder(button){
  const request=mealRequest;
  const result=await mealRpc('place_meal_order',{...args,p_access_token:request.token});
  const receipts=readMealReceipts();const record=receipts.find(r=>r.token===request.token);if(record)record.ref=result.order_ref;localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(receipts));
- closeModal(orderModal);showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(request.token);
+ showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(request.token);
  });
 }
 async function openCustomerMealOrder(token){
@@ -121,3 +122,5 @@ document.getElementById('mealQuantity').addEventListener('input',updateMealTotal
 document.getElementById('mealFulfilment').addEventListener('change',updateMealTotal);
 document.getElementById('mealCustomerForm').onsubmit=e=>{e.preventDefault();submitMealOrder(document.getElementById('submitOrderBtn'));};
 document.getElementById('myOrdersBtn').onclick=openMyMealReceipts;
+
+document.getElementById('orderBack').onclick=()=>showScreen('chefs');
