@@ -26,6 +26,8 @@ begin
  if not blocked then raise exception 'FAIL skipped transition';end if;
  perform public.chef_meal_order_status('temporary-test-session',oid,'cancelled','اختبار تحرير الحصص');
  if (select allocated from public.meal_offers where id=offer)<>0 then raise exception 'FAIL release portions';end if;
+ perform public.chef_meal_order_status('temporary-test-session',oid,'cancelled','إلغاء ثان لا يجب أن يحرر الحصص مرتين');
+ if (select allocated from public.meal_offers where id=offer)<>0 then raise exception 'FAIL double release';end if;
  select id into oid from public.orders where order_ref=response->>'order_ref';
  perform public.chef_meal_order_status('temporary-test-session',oid,'accepted');
  v:=public.customer_meal_order(t2);if v->>'pickup_instructions'<>'عنوان اختبار خاص' then raise exception 'FAIL pickup details';end if;
@@ -44,4 +46,4 @@ begin
  if has_table_privilege('anon','public.order_access','SELECT') then raise exception 'FAIL token access';end if;
 end $$;
 rollback;
-select 'PASS: totals, retries, ownership, private tracking, capacity, transitions, cancellation, delivery, feedback, expiry, grants; fixtures rolled back' as result;
+select 'PASS: totals, retries, ownership, private tracking, capacity, transitions, idempotent cancellation release, delivery, feedback, expiry, grants; fixtures rolled back' as result;
