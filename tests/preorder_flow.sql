@@ -15,7 +15,7 @@ begin
  select id into oid from public.orders where order_ref=response->>'order_ref';
  blocked:=false;begin perform public.chef_meal_order_status('temporary-other-session',oid,'accepted');exception when others then blocked:=true;end;
  if not blocked then raise exception 'FAIL cross chef access'; end if;
- v:=public.customer_meal_order(t);if v->>'chef_phone' is not null then raise exception 'FAIL premature contact disclosure';end if;
+ v:=public.customer_meal_order(t);if v->>'chef_phone' is null or v->>'pickup_instructions' is not null then raise exception 'FAIL order contact visibility';end if;
  blocked:=false;begin perform public.customer_meal_order(repeat('d',64));exception when others then blocked:=true;end;
  if not blocked then raise exception 'FAIL invalid customer token';end if;
  response:=public.place_meal_order(offer,1,'{"name":"زبون ثان","phone":"0600000003"}','pickup',t2);
@@ -47,3 +47,4 @@ begin
 end $$;
 rollback;
 select 'PASS: totals, retries, ownership, private tracking, capacity, transitions, idempotent cancellation release, delivery, feedback, expiry, grants; fixtures rolled back' as result;
+

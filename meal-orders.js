@@ -13,7 +13,7 @@ function mealLocalToISO(value){
 }
 async function mealRpc(name,args){const{data,error}=await db.rpc(name,args);if(error)throw Error(mealError(error.message));return data;}
 function mealError(message){
- const known={'invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','insufficient portions':'لا توجد حصص كافية لقبول هذا الطلب.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','invalid dates':'راجع المواعيد: آخر أجل قبل الجاهزية، وخلال الستين يومًا القادمة.'};
+ const known={'subscription_reference_once':'مرجع الأداء مسجل من قبل. راجع المرجع أو تواصل مع الإدارة.','payment instructions unavailable':'لم تتوفر تعليمات الأداء بعد.','subscription required':'يحتاج اشتراك المطبخ إلى تأكيد أو تجديد.','invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','insufficient portions':'لا توجد حصص كافية لقبول هذا الطلب.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','invalid dates':'راجع المواعيد: آخر أجل قبل الجاهزية، وخلال الستين يومًا القادمة.'};
  return Object.entries(known).find(([key])=>String(message).includes(key))?.[1]||'تعذر إتمام العملية. راجع البيانات وحاول مجددًا.';
 }
 async function mealBusy(button,work){const label=button.textContent;button.disabled=true;try{await work();}catch(err){showToast(err.message||'تعذر الاتصال. حاول مجددًا.');}finally{button.disabled=false;button.textContent=label;}}
@@ -91,7 +91,9 @@ async function submitMealOrder(button){
 }
 async function openCustomerMealOrder(token){
  const o=await mealRpc('customer_meal_order',{p_access_token:token}),screen=mealPanel('customerMealTracking','متابعة طلبي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=openMyMealReceipts;
- box.innerHTML=`<article class="meal-card"><h2>${escapeHtml(mealStatus[o.status]||o.status)}</h2><p>${escapeHtml(o.dish_name)} — ${o.quantity} حصة</p><p>الإجمالي: ${mealMoney(o.total)}</p><p>الجاهزية: ${mealDate(o.ready_at)}</p><p>مرجع الطلب: ${escapeHtml(o.order_ref)}</p>${o.status==='pending'?`<p>لم يُؤكد الطلب بعد. القبول مطلوب قبل ${mealDate(o.order_until)}؛ الحصة غير محجوزة حتى القبول.</p>`:''}${o.status_reason?`<p>${escapeHtml(o.status_reason)}</p>`:''}${o.chef_phone?`<p>للتنسيق مع المطبخ: <a href="tel:${escapeHtml(o.chef_phone)}">${escapeHtml(o.chef_phone)}</a></p>`:''}${o.pickup_instructions?`<p>الاستلام: ${escapeHtml(o.pickup_instructions)}</p>`:''}</article><p>احتفظ برمز المتابعة الخاص؛ من يملكه يستطيع متابعة طلبك. يبقى محفوظًا في هذا المتصفح.</p><input class="field" readonly aria-label="رمز متابعة الطلب" value="${token}"><p>لا يوجد دفع إلكتروني في هذه النسخة؛ يُرتب الدفع مباشرة مع المطبخ.</p>`;
+ box.innerHTML=`<article class="meal-card"><h2>${escapeHtml(mealStatus[o.status]||o.status)}</h2><p>${escapeHtml(o.dish_name)} — ${o.quantity} حصة</p><p>الإجمالي: ${mealMoney(o.total)}</p><p>الجاهزية: ${mealDate(o.ready_at)}</p><p>مرجع الطلب: ${escapeHtml(o.order_ref)}</p>${o.status==='pending'?`<p>لم يُؤكد الطلب بعد. القبول مطلوب قبل ${mealDate(o.order_until)}؛ الحصة غير محجوزة حتى القبول.</p>`:''}${o.status_reason?`<p>${escapeHtml(o.status_reason)}</p>`:''}${o.chef_phone?`<p>للتنسيق مع المطبخ: <a href="tel:${escapeHtml(o.chef_phone)}">${escapeHtml(o.chef_phone)}</a></p>`:''}${o.pickup_instructions?`<p>الاستلام: ${escapeHtml(o.pickup_instructions)}</p>`:''}</article><p>طلبك محفوظ في هذا المتصفح. احفظ رابطه للرجوع إليه من جهاز آخر، واحتفظ به لنفسك.</p><p>لا يوجد دفع إلكتروني في هذه النسخة؛ يُرتب الدفع مباشرة مع المطبخ.</p>`;
+ box.append(mealAction('حفظ رابط طلبي',async()=>{const url=new URL(location.href);url.hash='order='+token;try{await navigator.clipboard.writeText(url.href);showToast('تم نسخ رابط طلبك. احتفظ به لنفسك.');}catch{const input=document.createElement('input');input.className='field';input.readOnly=true;input.value=url.href;input.setAttribute('aria-label','رابط طلبي الخاص');box.append(input);input.focus();input.select();showToast('انسخ الرابط الظاهر للاحتفاظ بطلبك.');}}));
+ if(o.chef_phone){const phone=String(o.chef_phone).replace(/^0/,'212').replace(/[^0-9]/g,'');if(phone){const contact=document.createElement('a');contact.className='primary';contact.target='_blank';contact.rel='noopener noreferrer';contact.textContent='مراسلة المطبخ عبر واتساب';contact.href='https://wa.me/'+phone+'?text='+encodeURIComponent(`مرحبًا، أرسلت طلبًا عبر Ommi Food. المرجع: ${o.order_ref}، ${o.dish_name}، ${o.quantity} حصة. هل يمكن تأكيده داخل التطبيق؟`);box.append(contact);}}
  box.append(mealAction('تحديث حالة الطلب',()=>openCustomerMealOrder(token)));
  if(o.status==='pending')box.append(mealAction('إلغاء الطلب قبل القبول',async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'cancel'});await openCustomerMealOrder(token);}));
  if(['accepted','preparing','ready'].includes(o.status))box.insertAdjacentHTML('beforeend','<p>لإلغاء طلب مقبول، تواصل مع المطبخ لتأكيد الإلغاء.</p>');
@@ -101,7 +103,7 @@ async function openCustomerMealOrder(token){
  f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'feedback',p_text:f.elements.feedback.value,p_received:f.elements.received.value==='true',p_repeat:f.elements.repeat.value==='true'});showToast('تم حفظ رأيك.');});};box.append(f);
  }
  const complaint=document.createElement('form');complaint.className='meal-form';complaint.innerHTML=`<label>إبلاغ الإدارة عن مشكلة<textarea name="message" class="field" required minlength="5" maxlength="2000">${escapeHtml(o.complaint||'')}</textarea></label><button class="admin-secondary">إرسال البلاغ</button>${o.complaint?`<p>${o.complaint_resolved_at?'أغلقت الإدارة البلاغ.':'بلاغك محفوظ وينتظر متابعة الإدارة.'}</p>`:''}`;
- complaint.onsubmit=e=>{e.preventDefault();mealBusy(complaint.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'complaint',p_text:complaint.elements.message.value});await openCustomerMealOrder(token);});};box.append(complaint);showScreen(screen.id);
+ complaint.onsubmit=e=>{e.preventDefault();mealBusy(complaint.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'complaint',p_text:complaint.elements.message.value});await openCustomerMealOrder(token);});};const help=document.createElement('details');help.innerHTML='<summary>لدي مشكلة — التواصل مع الإدارة</summary>';help.append(complaint);box.append(help);showScreen(screen.id);mealTrackingToken=token;mealTrackingStatus=o.status;
 }
 function openMyMealReceipts(){
  const screen=mealPanel('myMealReceipts','طلباتي'),box=screen.querySelector('.meal-content');box.innerHTML='<p>طلبات هذا المتصفح. يمكنك أيضًا إدخال رمز متابعة احتفظت به.</p>';
@@ -109,7 +111,7 @@ function openMyMealReceipts(){
  const f=document.createElement('form');f.className='meal-form';f.innerHTML='<label>رمز المتابعة الخاص<input name="token" class="field" required pattern="[0-9a-f]{64}" autocomplete="off"></label><button class="primary">متابعة الطلب</button>';f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),()=>openCustomerMealOrder(f.elements.token.value.trim()));};box.append(f);showScreen(screen.id);
 }
 async function openChefMealOrders(){
- const orders=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken}),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>حدّث القائمة لمتابعة الطلبات الجديدة. لا تُحجز الحصص إلا عند القبول.</p>';box.append(mealAction('تحديث الطلبات',openChefMealOrders));
+ const orders=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken}),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>تنبيه الطلبات يتحدث أثناء فتح التطبيق. لا تُحجز الحصص إلا عند القبول.</p>';orders.sort((a,b)=>Number(mealEffectiveStatus(b)==='pending')-Number(mealEffectiveStatus(a)==='pending'));box.append(mealAction('تحديث الطلبات',openChefMealOrders));
  if(!orders.length)box.insertAdjacentHTML('beforeend','<p>لا توجد طلبات بعد.</p>');
  orders.forEach(o=>{
  const s=mealEffectiveStatus(o),card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)} — ${o.quantity} حصة</h2><strong>${escapeHtml(mealStatus[s]||s)}</strong><p>${escapeHtml(o.customer_name)} · <a href="tel:${escapeHtml(o.customer_phone)}">${escapeHtml(o.customer_phone)}</a></p><p>${o.fulfilment_type==='pickup'?'الاستلام من المطبخ':`التوصيل: ${escapeHtml(o.delivery_area)} — ${escapeHtml(o.customer_address)}`}</p><p>الجاهزية: ${mealDate(o.ready_at)} · ${mealMoney(o.total)}</p>${o.notes?`<p>ملاحظة الزبون: ${escapeHtml(o.notes)}</p>`:''}`;
@@ -124,3 +126,24 @@ document.getElementById('mealCustomerForm').onsubmit=e=>{e.preventDefault();subm
 document.getElementById('myOrdersBtn').onclick=openMyMealReceipts;
 
 document.getElementById('orderBack').onclick=()=>showScreen('chefs');
+
+
+// Only a fragment carries the private order capability; it is never sent in HTTP URLs.
+let mealTrackingToken=null,mealTrackingStatus=null,mealPollBusy=false,mealLastPending=null,mealLastSession=null;
+async function followOrderLink(){const m=location.hash.match(/^#order=([0-9a-f]{64})$/);if(!m)return;try{await openCustomerMealOrder(m[1]);const rows=readMealReceipts();if(!rows.some(r=>r.token===m[1])){rows.unshift({token:m[1],ref:'طلب محفوظ'});localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(rows.slice(0,100)));}history.replaceState(null,'',location.pathname+location.search);}catch(err){showToast(err.message);}}
+window.addEventListener('hashchange',followOrderLink);followOrderLink();
+setInterval(async()=>{
+ if(document.visibilityState==='hidden'||mealPollBusy)return;mealPollBusy=true;
+ try{
+  if(chefSessionToken&&document.querySelector('#chefKitchenDashboard.active,#chefMealOrders.active')){
+   if(mealLastSession!==chefSessionToken){mealLastPending=null;mealLastSession=chefSessionToken;}
+   const rows=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken});const ids=rows.filter(o=>mealEffectiveStatus(o)==='pending').map(o=>o.id);
+   let note=document.getElementById('mealNewOrderNotice');if(!note){note=document.createElement('button');note.id='mealNewOrderNotice';note.className='primary';note.setAttribute('aria-live','polite');note.onclick=()=>mealBusy(note,openChefMealOrders);}
+   const host=document.querySelector('#chefKitchenDashboard.active .kitchen-builder,#chefMealOrders.active .meal-content');if(host){host.prepend(note);note.hidden=ids.length===0;note.textContent=`طلبات تنتظر قبولك: ${ids.length} — فتح الطلبات`;}
+   if(ids.some(id=>!mealLastPending?.includes(id)))showToast(`لديك ${ids.length} طلب بانتظار القبول`);mealLastPending=ids;
+  }
+  if(mealTrackingToken&&document.querySelector('#customerMealTracking.active')){
+   const o=await mealRpc('customer_meal_order',{p_access_token:mealTrackingToken});if(o.status!==mealTrackingStatus){let note=document.getElementById('mealStatusChanged');if(!note){note=mealAction('تغيرت حالة طلبك — عرض التفاصيل',()=>openCustomerMealOrder(mealTrackingToken));note.id='mealStatusChanged';document.querySelector('#customerMealTracking .meal-content').prepend(note);}note.textContent=(mealStatus[o.status]||o.status)+' — عرض التفاصيل';showToast(mealStatus[o.status]||o.status);mealTrackingStatus=o.status;}
+  }
+ }catch{/* Keep the current form and retry next time; never discard typed notes. */}finally{mealPollBusy=false;}
+},20000);
