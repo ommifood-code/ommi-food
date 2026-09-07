@@ -25,7 +25,7 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
 const query={select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:[offer]})}};
 w.supabase={createClient:()=>({rpc,from:()=>query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
 w.localStorage.setItem('ommi_chef_session','test-session');
-for(const file of ['app.js','dish-images.js','meal-orders.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
+for(const file of ['app.js','dish-images.js','meal-orders.js','meal-ux-hardening.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
 const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
@@ -33,11 +33,16 @@ function field(id,value){w.document.getElementById(id).value=value;}
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
+ assert.match(w.document.getElementById('mealKitchenGuide').textContent,/أطباقي المحفوظة/);
+ assert.match(w.document.getElementById('mealKitchenGuide').textContent,/وجبات الحجز/);
+ assert.match(w.document.getElementById('mealKitchenGuide').textContent,/طلبات مطبخي/);
  await w.openMealOfferForm(chef);
+ assert.match(w.document.querySelector('.offer-meaning').textContent,/ليست طبقًا جديدًا/);
  const form=w.document.getElementById('mealOfferForm');
  for(const[k,v]of Object.entries({portion:'حصة لشخص',ingredients:'قمح وخضر',allergens:'قمح',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'myMealOffers');
+ assert.match(w.document.querySelector('.offers-meaning').textContent,/ليست قائمة أطباق مطبخك الدائمة/);
  const payload=calls.find(c=>c[0]==='meal_offer_create')[1].p_offer;
  assert.equal(payload.ready_at,'2030-09-09T12:00:00.000Z');
  assert.equal(payload.fulfilment_type,'pickup');
@@ -45,6 +50,7 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.equal(w.document.getElementById('mealOrderFields').hidden,true);
  w.document.querySelector('#dishList button').click();
  assert.equal(w.document.getElementById('mealOrderFields').hidden,false);
+ assert.match(w.document.querySelector('.pending-order-warning').textContent,/بانتظار قبول المطبخ/);
  field('mealQuantity','2');field('mealFulfilment','delivery');w.updateMealTotal();
  assert.match(w.document.getElementById('mealTotal').textContent,/95.00/);
  assert.equal(w.document.getElementById('customerArea').required,true);
@@ -62,6 +68,6 @@ function field(id,value){w.document.getElementById(id).value=value;}
  await w.document.getElementById('submitKitchenBtn').onclick();
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','saving returns to dashboard');
  const ids=[...w.document.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length,'unique element IDs');
- console.log('PASS: dashboard, offer form, Morocco time, delivery conditions, total display, checkout, private receipt, save navigation');
+ console.log('PASS: dashboard separation, saved-vs-offer meaning, Morocco time, pending status, total display, checkout, private receipt, save navigation');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});
