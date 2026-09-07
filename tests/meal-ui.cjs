@@ -27,14 +27,14 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
 const query={select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:[offer]})}};
 w.supabase={createClient:()=>({rpc,from:()=>query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
 w.localStorage.setItem('ommi_chef_session','test-session');
-for(const file of ['app.js','dish-images.js','meal-orders.js','meal-ux-hardening.js','subscriptions.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
+for(const file of ['app.js','dish-images.js','meal-orders.js','meal-ux-hardening.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
 const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
  await tick();
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
- assert.equal(w.document.querySelectorAll('#mealActions button').length,4);
+ assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/أطباقي المحفوظة/);
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/وجبات الحجز/);
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/طلبات مطبخي/);
@@ -71,9 +71,7 @@ function field(id,value){w.document.getElementById(id).value=value;}
  const whatsapp=w.document.querySelector('a[href^="https://wa.me/"]');assert.ok(whatsapp);assert.match(decodeURIComponent(whatsapp.href),/OF-test/);assert.ok(!whatsapp.href.includes(placed.p_access_token));
  const saveLink=[...w.document.querySelectorAll('#customerMealTracking button')].find(b=>b.textContent==='حفظ رابط طلبي');saveLink.click();await tick();
  const link=w.document.querySelector('input[aria-label="رابط طلبي الخاص"]').value;assert.equal(new URL(link).search,'');assert.equal(new URL(link).hash,'#order='+placed.p_access_token);
- await w.openSubscription();assert.match(w.document.querySelector('#chefSubscription').textContent,/50/);
- const sf=w.document.querySelector('#chefSubscription form');sf.elements.reference.value='REF-TEST';sf.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
- assert.equal(w.document.querySelector('#chefSubscription form'),null);assert.match(w.document.querySelector('#chefSubscription').textContent,/بانتظار التحقق/);
+ assert.doesNotMatch(w.document.body.textContent,/50 درهمًا|اشتراك المطبخ/);
  await w.openKitchenEditor(chef,'edit');
  await w.document.getElementById('submitKitchenBtn').onclick();
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','saving returns to dashboard');

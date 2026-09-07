@@ -20,3 +20,6 @@ async function loadAdminOrders(){
 }
 document.getElementById('adminOrdersRefresh').onclick=()=>loadAdminOrders().catch(()=>toastMsg('تعذر الاتصال.'));
 
+
+const freeLaunchAdminRender=render;render=function(rows){freeLaunchAdminRender(rows);loadAdminOrders().catch(()=>toastMsg("تعذر تحميل الطلبات"));};
+if(!dashboard.hidden)loadAdminOrders().catch(()=>toastMsg("تعذر تحميل الطلبات"));

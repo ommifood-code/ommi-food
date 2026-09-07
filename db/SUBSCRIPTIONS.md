@@ -1,13 +1,11 @@
-# Monthly subscription release
+# Free launch — current policy
 
-50 MAD per calendar month, paid manually through Cash Plus. No order commission, automatic debit, paid messaging, advertising, or boost integration.
+The application launches free. There are no subscription screens, payment requests, expiry gates, or billing API access for application roles. Administrators activate a reviewed kitchen directly, with explicit phone verification when needed. Existing order, contact and tracking improvements are retained.
 
-Apply `monthly_subscriptions.sql`, followed by `subscription_order_guards.sql` in one migration after the existing preorder schema. They were applied together as `monthly_cashplus_subscriptions_and_order_contact`; do not rerun them on the existing database.
+`free_launch.sql` supersedes the earlier monthly subscription policy. The billing tables and dates remain private and dormant as groundwork only. Do not enable billing just by toggling a flag: future activation requires a separately reviewed interface and explicit product approval.
 
-The administrator enters the real recipient instructions in the subscription section. Until instructions are saved, the chef cannot submit a payment claim. Only the receipt reference is stored, never a cash withdrawal code or publicly hosted receipt photograph. Recording a reference does not activate membership. The administrator checks actual receipt outside the app and confirms it. Confirmation adds one month from the later of confirmation time or current expiry; retries cannot add a second month. Rejected claims include a correction reason.
+The intended future process is manual: transfer to the owner’s RIB, send a transfer-receipt image, owner checks receipt in the bank account, then reactivates the kitchen. No receipt-upload workflow or account details are introduced during the free launch.
 
-Publishing can be combined with payment confirmation. Phone ownership must be explicitly confirmed if not previously verified. Existing honorary memberships are preserved. Paid expiry blocks discovery and new orders/acceptances; previously accepted orders can still be prepared and delivered. Suspended kitchens are not silently republished by a payment-only confirmation.
+Applied migrations: `free_launch_disable_billing`, followed by `disable_dormant_billing_api_during_free_launch`. Do not rerun these on the current database.
 
-Customer contact appears only through a valid private order capability. Pickup address remains hidden until acceptance. WhatsApp opens a user-initiated message containing the ordinary order reference, never the private tracking token. Tracking links put the private token in the URL fragment and remove it after loading. Notifications poll every 20 seconds while relevant screens are open; there are no background SMS or WhatsApp notifications. Existing typed form values are preserved when announcing an update.
-
-Validation: `tests/subscriptions.sql` and `tests/preorder_flow.sql` run in rollback-only transactions. `tests/meal-ui.cjs` and `tests/admin-subscriptions.cjs` use jsdom with mock RPCs. No real payment was recorded. A real end-to-end browser order and actual Cash Plus receipt confirmation remain launch checks.
+Verification: tests/subscriptions.sql checks free activation, administrator authority, phone verification, disabled billing and no expiry gate in a rolled-back transaction. Both DOM tests check absence of billing UI and direct activation. Existing private tables deliberately have no public RLS policies. Privileged activation still checks is_admin().
