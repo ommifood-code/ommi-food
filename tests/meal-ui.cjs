@@ -34,9 +34,14 @@ const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
  await tick();
+ assert.equal(w.document.querySelectorAll('.gender.active').length,0,'no default gender');
+ field('joinName','كريم');await w.document.getElementById('submitJoinBtn').onclick();
+ assert.ok(!calls.some(c=>c[0]==='chef_register'),'missing gender does not submit');
+ assert.match(w.document.getElementById('toast').textContent,/اختر الجنس/);
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
+ const savedDishes=chef.dishes;chef.dishes=[];await w.openMealOfferForm(chef);assert.ok(w.document.querySelector('[name=dish_name]'),'first meal without saved dish');chef.dishes=savedDishes;
  await w.openMealOfferForm(chef);
  const form=w.document.getElementById('mealOfferForm');
  for(const[k,v]of Object.entries({specialty:'أكلات تقليدية وشعبية',dish_name:'كسكس',price:'40',portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
@@ -80,7 +85,7 @@ function field(id,value){w.document.getElementById(id).value=value;}
  w.document.querySelector('.nearby-card').click();await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'orderModal');
  const ids=[...w.document.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length,'unique element IDs');
- console.log('PASS: dashboard separation, saved-vs-offer meaning, Morocco time, pending status, total display, checkout, private receipt, save navigation');
+ console.log('PASS: mandatory gender, first meal without prior dish, atomic publish UI, Morocco time, pending checkout, private receipt, direct discovery, optional map, save navigation');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});
 
