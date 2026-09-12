@@ -10,18 +10,16 @@ const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'h
 const w=dom.window,ctx=dom.getInternalVMContext();
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
 const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:5,allocated:0,active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
-const calls=[];let placed;let paymentPending=false;
+const calls=[];let placed;
 const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
- case 'chef_subscription':return{data:{amount:50,membership:'none',instructions:'تعليمات اختبار',payments:paymentPending?[{id:'p',reference:'REF-TEST',status:'pending'}]:[]}};
- case 'submit_subscription_payment':paymentPending=true;return{data:'p'};
  case 'chef_session_status':return{data:[chef]};
  case 'chef_correction_status':return{data:[]};
  case 'chef_secure_save':return{data:null};
  case 'meal_offer_create':return{data:'new-offer'};
  case 'chef_meal_offers':return{data:[offer]};
  case 'chef_meal_orders':return{data:[]};
- case 'place_meal_order':placed=args;return{data:{order_ref:'OF-test',total:95}};
- case 'customer_meal_order':return{data:{order_ref:'OF-test',status:'pending',chef_phone:'0600000000',dish_name:'كسكس',quantity:2,total:95,ready_at:offer.ready_at,order_until:offer.order_until,received_confirmed:null,would_repeat:null}};
+ case 'place_meal_order':placed=args;return{data:{order_ref:'OF-test',total:95,status:'accepted'}};
+ case 'customer_meal_order':return{data:{order_ref:'OF-test',status:'accepted',chef_phone:'0600000000',dish_name:'كسكس',quantity:2,total:95,ready_at:offer.ready_at,order_until:offer.order_until,received_confirmed:null,would_repeat:null}};
  default:return{error:{message:'unexpected RPC '+name}};
 }};
 const query={select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:[offer]})}};
@@ -38,10 +36,12 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/أطباقي المحفوظة/);
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/وجبات الحجز/);
  assert.match(w.document.getElementById('mealKitchenGuide').textContent,/طلبات مطبخي/);
+ assert.doesNotMatch(w.document.getElementById('mealKitchenGuide').textContent,/قبول أو رفض/);
  await w.openMealOfferForm(chef);
  assert.match(w.document.querySelector('.offer-meaning').textContent,/ليست طبقًا جديدًا/);
  const form=w.document.getElementById('mealOfferForm');
  for(const[k,v]of Object.entries({portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
+ assert.doesNotMatch(form.textContent,/يحتاج قبول المطبخ/);
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'myMealOffers');
  assert.match(w.document.querySelector('.offers-meaning').textContent,/ليست قائمة أطباق مطبخك الدائمة/);
@@ -53,7 +53,8 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.equal(w.document.getElementById('orderModal').classList.contains('modal'),false);
  assert.equal(w.document.querySelector('#dishList button').getAttribute('aria-pressed'),'true');
  assert.equal(w.document.getElementById('mealOrderFields').hidden,false);
- assert.match(w.document.querySelector('.pending-order-warning').textContent,/بانتظار قبول المطبخ/);
+ assert.match(w.document.querySelector('.pending-order-warning').textContent,/تُحجز الحصص المتاحة مباشرة/);
+ assert.doesNotMatch(w.document.querySelector('.pending-order-warning').textContent,/بانتظار قبول المطبخ/);
  field('mealQuantity','2');field('mealFulfilment','delivery');w.updateMealTotal();
  assert.match(w.document.getElementById('mealTotal').textContent,/95.00/);
  assert.equal(w.document.getElementById('customerArea').required,true);
@@ -66,7 +67,8 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.match(placed.p_access_token,/^[a-f0-9]{64}$/);
  assert.ok(!('total' in placed),'client does not submit its own price');
  assert.equal(JSON.parse(w.localStorage.getItem('ommi_meal_receipts'))[0].ref,'OF-test');
- assert.match(w.document.getElementById('customerMealTracking').textContent,/بانتظار قبول المطبخ/);
+ assert.match(w.document.getElementById('customerMealTracking').textContent,/تم تأكيد الطلب/);
+ assert.doesNotMatch(w.document.getElementById('customerMealTracking').textContent,/بانتظار قبول المطبخ/);
  assert.equal(w.document.querySelector('#customerMealTracking input[aria-label="رمز متابعة الطلب"]'),null);
  const whatsapp=w.document.querySelector('a[href^="https://wa.me/"]');assert.ok(whatsapp);assert.match(decodeURIComponent(whatsapp.href),/OF-test/);assert.ok(!whatsapp.href.includes(placed.p_access_token));
  const saveLink=[...w.document.querySelectorAll('#customerMealTracking button')].find(b=>b.textContent==='حفظ رابط طلبي');saveLink.click();await tick();
@@ -76,7 +78,6 @@ function field(id,value){w.document.getElementById(id).value=value;}
  await w.document.getElementById('submitKitchenBtn').onclick();
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','saving returns to dashboard');
  const ids=[...w.document.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length,'unique element IDs');
- console.log('PASS: dashboard separation, saved-vs-offer meaning, Morocco time, pending status, total display, checkout, private receipt, save navigation');
+ console.log('PASS: dashboard separation, immediate confirmation copy, Morocco time, total display, checkout, private receipt, save navigation');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});
-
