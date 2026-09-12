@@ -1,0 +1,35 @@
+begin;
+do $$
+declare r jsonb; c uuid; token text; offer uuid; response jsonb; oid uuid; blocked boolean; n integer;
+begin
+ r:=public.chef_register('اختبار تفعيل مؤقت','0600000081','casablanca','الدار البيضاء','اختبار','m','739182');
+ c:=(r->>'chef_id')::uuid;token:=r->>'session_token';
+ if not exists(select 1 from public.chefs where id=c and status='active' and membership_status='active' and phone_verified=false) then raise exception 'FAIL registration activation';end if;
+ update public.chefs set dishes='[{"name":"كسكس","price":40}]' where id=c;
+ insert into public.chef_kitchen_profiles(chef_id,fulfilment_type) values(c,'pickup');
+ offer:=public.meal_offer_create(token,0,jsonb_build_object('portion','حصة واحدة','ingredients','خضر','quantity',1,'order_until',now()+interval '1 day','ready_at',now()+interval '2 days','fulfilment_type','pickup','pickup_instructions','عنوان اختبار خاص'));
+ execute 'set local role anon';
+ select count(*) into n from public.chefs where id=c;
+ if n<>1 then raise exception 'FAIL public kitchen visibility';end if;
+ select count(*) into n from public.meal_offers where id=offer;
+ if n<>1 then raise exception 'FAIL public offer visibility';end if;
+ response:=public.place_meal_order(offer,1,'{"name":"زبون اختبار","phone":"0600000082"}','pickup',repeat('8',64));
+ if public.customer_meal_order(repeat('8',64))->>'status'<>'pending' then raise exception 'FAIL automatic confirmation';end if;
+ execute 'reset role';
+ if (select allocated from public.meal_offers where id=offer)<>0 then raise exception 'FAIL premature reservation';end if;
+ select id into oid from public.orders where order_ref=response->>'order_ref';
+ perform public.chef_meal_order_status(token,oid,'accepted');
+ if (select allocated from public.meal_offers where id=offer)<>1 then raise exception 'FAIL reservation on acceptance';end if;
+ perform public.chef_meal_order_status(token,oid,'cancelled','اختبار الإلغاء');
+ perform public.chef_meal_order_status(token,oid,'cancelled','اختبار الإلغاء');
+ if (select allocated from public.meal_offers where id=offer)<>0 then raise exception 'FAIL double release';end if;
+ update public.chefs set membership_status='inactive' where id=c;
+ execute 'set local role anon';
+ select count(*) into n from public.chefs where id=c;
+ if n<>0 then raise exception 'FAIL suspended visibility';end if;
+ blocked:=false;begin perform public.place_meal_order(offer,1,'{"name":"زبون آخر","phone":"0600000083"}','pickup',repeat('9',64));exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL suspended booking';end if;
+ execute 'reset role';
+end $$;
+rollback;
+select 'PASS: registration active without fake verification, anon discovery and ordering, pending until chef accepts, reservation/release, suspension; rolled back' as result;

@@ -1,7 +1,9 @@
-# Kitchen activation and order acceptance are separate
+# Immediate kitchen activation — implemented
 
-Approved product decision: during the free launch, a newly registered kitchen should activate automatically. Phone verification must not be fabricated. Account suspension remains available to administrators. Public discovery and booking must use consistent eligibility checks, with no paid subscription requirement during the free launch.
+Free-launch chef_register now creates active/honorary/active kitchens without falsifying phone verification. The existing publication guard and RLS allow unverified phones only during the free launch. New orders remain pending, and chef acceptance reserves portions atomically. No existing orders or accounts were converted. Phone changes continue to invalidate verification and hide the account; administrative suspension still blocks public visibility and booking.
 
-Customer orders remain pending until the chef accepts. Acceptance reserves portions atomically; cancellation releases previously allocated portions once. Do not convert existing pending orders to accepted as a migration side effect.
+Applied migration: activate_kitchens_on_registration_keep_order_acceptance. Source: db/immediate_kitchen_only.sql. Do not apply the removed immediate_kitchen_and_auto_confirm.sql.
 
-Status: the mixed immediate_kitchen_and_auto_confirm.sql was removed because it implemented an unintended order-confirmation change. The existing phone-publication trigger must be inspected before implementing kitchen-only activation. Database SQL access timed out twice on 2026-09-12 although the management API reports the project ACTIVE_HEALTHY. No kitchen-activation migration has been applied or verified in this repair. Do not claim immediate activation is live.
+Verified on the live database with rollback-only tests/immediate-kitchen.sql: actual registration, anonymous kitchen/offer visibility and ordering, pending status, no early allocation, chef acceptance, idempotent cancellation and suspended-kitchen protections. Both DOM suites pass. Browser end-to-end testing by the user remains separate.
+
+Paid launch is still disabled. Do not enable billing without reviewing all publication and administrative UX rules together.
