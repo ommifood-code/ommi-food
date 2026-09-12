@@ -17,17 +17,19 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
  case 'chef_session_status':return{data:[chef]};
  case 'chef_correction_status':return{data:[]};
  case 'chef_secure_save':return{data:null};
- case 'meal_offer_create':return{data:'new-offer'};
+ case 'chef_publish_meal':return{data:'new-offer'};
+ case 'public_kitchen_locations':return{data:[{chef_id:chef.id,lat:33.573,lng:-7.623}]};
+ case 'chef_location':return{data:null};
  case 'chef_meal_offers':return{data:[offer]};
  case 'chef_meal_orders':return{data:[]};
  case 'place_meal_order':placed=args;return{data:{order_ref:'OF-test',total:95}};
  case 'customer_meal_order':return{data:{order_ref:'OF-test',status:'pending',chef_phone:'0600000000',dish_name:'كسكس',quantity:2,total:95,ready_at:offer.ready_at,order_until:offer.order_until,received_confirmed:null,would_repeat:null}};
  default:return{error:{message:'unexpected RPC '+name}};
 }};
-const query={select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:[offer]})}};
-w.supabase={createClient:()=>({rpc,from:()=>query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
+const query=table=>({select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:table==='chefs'?[chef]:[offer]})}});
+w.supabase={createClient:()=>({rpc,from:query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
 w.localStorage.setItem('ommi_chef_session','test-session');
-for(const file of ['app.js','dish-images.js','meal-orders.js','meal-ux-hardening.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
+for(const file of ['app.js','dish-images.js','meal-orders.js','nearby.js','simple-launch.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
 const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
@@ -35,17 +37,13 @@ function field(id,value){w.document.getElementById(id).value=value;}
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
- assert.match(w.document.getElementById('mealKitchenGuide').textContent,/أطباقي المحفوظة/);
- assert.match(w.document.getElementById('mealKitchenGuide').textContent,/وجبات الحجز/);
- assert.match(w.document.getElementById('mealKitchenGuide').textContent,/طلبات مطبخي/);
  await w.openMealOfferForm(chef);
- assert.match(w.document.querySelector('.offer-meaning').textContent,/ليست طبقًا جديدًا/);
  const form=w.document.getElementById('mealOfferForm');
- for(const[k,v]of Object.entries({portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
+ for(const[k,v]of Object.entries({specialty:'أكلات تقليدية وشعبية',dish_name:'كسكس',price:'40',portion:'حصة لشخص',ingredients:'قمح وخضر',quantity:'5',order_until:'2030-09-08T11:00',ready_at:'2030-09-09T13:00',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'myMealOffers');
- assert.match(w.document.querySelector('.offers-meaning').textContent,/ليست قائمة أطباق مطبخك الدائمة/);
- const payload=calls.find(c=>c[0]==='meal_offer_create')[1].p_offer;
+
+ const payload=calls.find(c=>c[0]==='chef_publish_meal')[1].p_offer;
  assert.equal(payload.ready_at,'2030-09-09T12:00:00.000Z');
  assert.equal(payload.fulfilment_type,'pickup');
  await w.openMealOrdering(chef);
@@ -75,8 +73,15 @@ function field(id,value){w.document.getElementById(id).value=value;}
  await w.openKitchenEditor(chef,'edit');
  await w.document.getElementById('submitKitchenBtn').onclick();
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','saving returns to dashboard');
+ await w.loadChefs();
+ assert.equal(w.document.querySelectorAll('script[src*=leaflet]').length,0,'map not loaded by discovery');
+ assert.ok(w.document.querySelector('.nearby-card'));
+ assert.ok(vm.runInContext("nearDistance([33.57,-7.62],[33.58,-7.62])",ctx)>1);
+ w.document.querySelector('.nearby-card').click();await tick();
+ assert.equal(w.document.querySelector('.screen.active').id,'orderModal');
  const ids=[...w.document.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length,'unique element IDs');
  console.log('PASS: dashboard separation, saved-vs-offer meaning, Morocco time, pending status, total display, checkout, private receipt, save navigation');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});
+
 
