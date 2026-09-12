@@ -1,10 +1,19 @@
-/* Ommi Food UX hardening before the final E2E test. No business rules live here. */
+/* Ommi Food UX hardening before the final E2E test. Business rules live in SQL. */
 'use strict';
 
 function uxInfo(className,title,text){
  const box=document.createElement('div');box.className=`meal-ux-note ${className||''}`;
  box.innerHTML=`<strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span>`;return box;
 }
+
+// New orders are confirmed immediately by the server. Keep a neutral label only for legacy pending rows.
+if(typeof mealStatus==='object'){
+ mealStatus.pending='طلب مسجل';
+ mealStatus.accepted='تم تأكيد الطلب';
+}
+
+const pendingCopy=document.querySelector('.pending-order-warning');
+if(pendingCopy)pendingCopy.textContent='عند إرسال الطلب تُحجز الحصص المتاحة مباشرة ويصبح الطلب مؤكدًا. الدفع مباشرة مع المطبخ.';
 
 const _mountMealDashboard=mountMealDashboard;
 mountMealDashboard=function(c){
@@ -14,7 +23,7 @@ mountMealDashboard=function(c){
  let guide=dash.querySelector('#mealKitchenGuide');
  if(!guide){
   guide=document.createElement('section');guide.id='mealKitchenGuide';guide.className='meal-kitchen-guide';
-  guide.innerHTML=`<div><strong>أطباقي المحفوظة</strong><span>وصفات وصور وأسعار تحفظها في مطبخك ويمكنك تعديلها في أي وقت. حفظ الطبق وحده لا يجعله متاحًا للطلب.</span></div><div><strong>وجبات الحجز</strong><span>عندما تريد بيع طبق في موعد محدد، أتحه كوجبة وحدد عدد الحصص وآخر أجل للحجز وموعد الجاهزية.</span></div><div><strong>طلبات مطبخي</strong><span>هنا تدير الطلبات بعد وصولها: قبول أو رفض، ثم التحضير والجاهزية والتسليم أو الإلغاء.</span></div>`;
+  guide.innerHTML=`<div><strong>أطباقي المحفوظة</strong><span>وصفات وصور وأسعار تحفظها في مطبخك ويمكنك تعديلها في أي وقت. حفظ الطبق وحده لا يجعله متاحًا للطلب.</span></div><div><strong>وجبات الحجز</strong><span>عندما تريد بيع طبق في موعد محدد، أتحه كوجبة وحدد عدد الحصص وآخر أجل للحجز وموعد الجاهزية.</span></div><div><strong>طلبات مطبخي</strong><span>كل طلب جديد لوجبة متاحة يتأكد مباشرة إذا كانت الحصص موجودة. بعدها تدير التحضير والجاهزية والتسليم أو الإلغاء.</span></div>`;
   actions.insertAdjacentElement('afterend',guide);
  }
 };
@@ -22,8 +31,15 @@ mountMealDashboard=function(c){
 const _openMealOfferForm=openMealOfferForm;
 openMealOfferForm=async function(c){
  await _openMealOfferForm(c);
- const box=document.querySelector('#mealOfferEditor .meal-content');if(!box||box.querySelector('.offer-meaning'))return;
- box.prepend(uxInfo('offer-meaning','هذه وجبة متاحة وليست طبقًا جديدًا','اختر طبقًا محفوظًا في مطبخك وحدد متى سيكون متاحًا للحجز وكم حصة ستبيع. السعر يؤخذ من الطبق المحفوظ.'));
+ const box=document.querySelector('#mealOfferEditor .meal-content');if(!box)return;
+ if(!box.querySelector('.offer-meaning'))box.prepend(uxInfo('offer-meaning','هذه وجبة متاحة وليست طبقًا جديدًا','اختر طبقًا محفوظًا في مطبخك وحدد متى سيكون متاحًا للحجز وكم حصة ستبيع. السعر يؤخذ من الطبق المحفوظ.'));
+ [...box.querySelectorAll('label')].forEach(label=>{
+  if(label.textContent.includes('آخر أجل للطلب وقبوله'))label.childNodes[0].textContent='آخر أجل للطلب';
+ });
+ [...box.querySelectorAll('small,p')].forEach(el=>{
+  if(el.textContent.includes('يظهر للزبون بعد قبول طلبه فقط'))el.textContent='يظهر عنوان الاستلام للزبون بعد تأكيد الطلب.';
+  if(el.textContent.includes('الطلب يحتاج قبول المطبخ'))el.textContent='كل طلب جديد يُؤكد مباشرة إذا كانت الحصص متاحة، وتُحجز الحصص لحظة تسجيله.';
+ });
 };
 
 const _openMyMealOffers=openMyMealOffers;
@@ -39,7 +55,7 @@ if(typeof openChefMealOrders==='function'){
   await _openChefMealOrders();
   const box=document.querySelector('#chefMealOrders .meal-content');if(!box)return;
   let note=box.querySelector('.chef-order-rule');
-  if(!note){note=uxInfo('chef-order-rule','قاعدة الحصص','الطلب المعلّق لا يحجز حصصًا. الحصص تُخصم عند القبول، وإذا أُلغي طلب مقبول يعيد النظام حصصه مرة واحدة فقط.');box.prepend(note);}
+  if(!note){note=uxInfo('chef-order-rule','قاعدة الحصص','الحصص تُحجز فور تسجيل الطلب المؤكد. إذا أُلغي الطلب قبل بدء التحضير يعيد النظام حصصه مرة واحدة فقط.');box.prepend(note);}
  };
 }
 
