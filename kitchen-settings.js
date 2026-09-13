@@ -23,6 +23,6 @@ async function openKitchenPreferences(){
  screen.querySelector('.back').onclick=()=>openKitchenSettings(c);
  box.innerHTML=`<form class="meal-form"><h1>إعدادات لجميع أطباق مطبخك</h1>${kitchenSettingsFields(settings)}<button type="submit" class="primary">حفظ والعودة إلى مطبخي</button></form>`;
  const form=box.querySelector('form');bindKitchenSettings(form,settings);
- form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;mealBusy(form.querySelector('[type=submit]'),async()=>{await mealRpc('chef_order_settings',{p_session_token:chefSessionToken,p_settings:readKitchenSettings(form)});showToast('حُفظت إعدادات مطبخك لجميع الطلبات الجديدة.');const fresh=await restoreChefSession(false);if(fresh)await openKitchenDashboard(fresh);});};showScreen(screen.id);
+ form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;mealBusy(form.querySelector('[type=submit]'),async()=>{await mealRpc('chef_order_settings',{p_session_token:chefSessionToken,p_settings:readKitchenSettings(form)});markFormSaved(form);showToast('حُفظت إعدادات مطبخك لجميع الطلبات الجديدة.');const fresh=await restoreChefSession(false);if(fresh)await openKitchenDashboard(fresh);});};showScreen(screen.id);
 }
 function kitchenDaysLabel(days){return days?`أيام العمل المعتادة: ${days}`:'أيام العمل تُتفق مع المطبخ';}

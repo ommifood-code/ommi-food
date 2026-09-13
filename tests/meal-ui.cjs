@@ -8,7 +8,7 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 assert.match(fs.readFileSync(path.join(root,'simple-launch.js'),'utf8'), /async function openMealOfferForm\(/, 'meal editor has an explicit declaration for strict browser scripts');
 const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'https://test.invalid',runScripts:'outside-only'});
-const w=dom.window,ctx=dom.getInternalVMContext();
+const w=dom.window,ctx=dom.getInternalVMContext();w.confirm=()=>true;
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
 const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,serves:4,ingredients:'قمح وخضر',active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
 const calls=[];let placed;let kitchenDefaults=null;let paymentPending=false;
@@ -58,6 +58,15 @@ function field(id,value){w.document.getElementById(id).value=value;}
  const savedDishes=chef.dishes;chef.dishes=[];await w.openMealOfferForm(chef);assert.ok(w.document.querySelector('[name=dish_name]'),'first meal without saved dish');chef.dishes=savedDishes;
  await w.openMealOfferForm(chef);
  const form=w.document.getElementById('mealOfferForm');
+ let prompts=0;w.confirm=()=>{prompts++;return false;};
+ form.elements.dish_name.value='طبق لم يحفظ';
+ w.document.querySelector('#mealOfferEditor .back').click();assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor','cancel discard keeps editor');assert.equal(form.elements.dish_name.value,'طبق لم يحفظ');
+ w.document.querySelector('#mealOfferEditor [data-home]').click();assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor','home respects unsaved edits');assert.equal(prompts,2);
+ const leaving=new w.Event('beforeunload',{cancelable:true});w.dispatchEvent(leaving);assert.equal(leaving.defaultPrevented,true,'refresh warns for dirty form');
+ w.markFormSaved(form);const savedLeaving=new w.Event('beforeunload',{cancelable:true});w.dispatchEvent(savedLeaving);assert.equal(savedLeaving.defaultPrevented,false,'saved form does not warn');
+ form.elements.dish_name.value='تعديل آخر';w.confirm=()=>true;w.document.querySelector('#mealOfferEditor .back').click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','confirmed discard navigates');
+ w.showScreen('mealOfferEditor');
+
  for(const[k,v]of Object.entries({specialty:'أكلات تقليدية وشعبية',dish_name:'كسكس',price:'40',serves_choice:'4',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','save returns to my kitchen');

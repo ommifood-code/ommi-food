@@ -65,7 +65,7 @@ async function submitMealOrder(button){
  const request=mealRequest;
  const result=await mealRpc('place_meal_order',{...args,p_access_token:request.token});
  const receipts=readMealReceipts();const record=receipts.find(r=>r.token===request.token);if(record)record.ref=result.order_ref;localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(receipts));
- showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(request.token);
+ markFormSaved(document.getElementById('mealCustomerForm'));showToast('أُرسل الطلب؛ ينتظر قبول المطبخ.');await openCustomerMealOrder(request.token);
  });
 }
 async function openCustomerMealOrder(token){
@@ -80,10 +80,10 @@ async function openCustomerMealOrder(token){
  if(o.status==='delivered'){box.insertAdjacentHTML('beforeend','<p class=warm-thanks>شكرًا لاختيارك مطبخًا منزليًا. طلبك يدعم عملًا من البيت.</p>');
  const f=document.createElement('form');f.className='meal-form';f.innerHTML=`<h2>كيف كانت التجربة؟</h2><label>هل استلمت الطلب؟<select name="received" class="field"><option value="true">نعم</option><option value="false">لا</option></select></label><label>هل ترغب في تكرار الطلب؟<select name="repeat" class="field"><option value="true">نعم</option><option value="false">لا</option></select></label><label>ملاحظتك<textarea name="feedback" class="field" maxlength="2000">${escapeHtml(o.feedback||'')}</textarea></label><button class="primary">حفظ رأيي</button>`;
  if(o.received_confirmed!==null)f.elements.received.value=String(o.received_confirmed);if(o.would_repeat!==null)f.elements.repeat.value=String(o.would_repeat);
- f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'feedback',p_text:f.elements.feedback.value,p_received:f.elements.received.value==='true',p_repeat:f.elements.repeat.value==='true'});showToast('تم حفظ رأيك.');});};box.append(f);
+ f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'feedback',p_text:f.elements.feedback.value,p_received:f.elements.received.value==='true',p_repeat:f.elements.repeat.value==='true'});markFormSaved(f);showToast('تم حفظ رأيك.');});};box.append(f);
  }
  const complaint=document.createElement('form');complaint.className='meal-form';complaint.innerHTML=`<label>إبلاغ الإدارة عن مشكلة<textarea name="message" class="field" required minlength="5" maxlength="2000">${escapeHtml(o.complaint||'')}</textarea></label><button class="admin-secondary">إرسال البلاغ</button>${o.complaint?`<p>${o.complaint_resolved_at?'أغلقت الإدارة البلاغ.':'بلاغك محفوظ وينتظر متابعة الإدارة.'}</p>`:''}`;
- complaint.onsubmit=e=>{e.preventDefault();mealBusy(complaint.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'complaint',p_text:complaint.elements.message.value});await openCustomerMealOrder(token);});};const help=document.createElement('details');help.innerHTML='<summary>لدي مشكلة — التواصل مع الإدارة</summary>';help.append(complaint);box.append(help);showScreen(screen.id);mealTrackingToken=token;mealTrackingStatus=o.status;
+ complaint.onsubmit=e=>{e.preventDefault();mealBusy(complaint.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'complaint',p_text:complaint.elements.message.value});markFormSaved(complaint);await openCustomerMealOrder(token);});};const help=document.createElement('details');help.innerHTML='<summary>لدي مشكلة — التواصل مع الإدارة</summary>';help.append(complaint);box.append(help);showScreen(screen.id);mealTrackingToken=token;mealTrackingStatus=o.status;
 }
 function openMyMealReceipts(){
  const screen=mealPanel('myMealReceipts','طلباتي'),box=screen.querySelector('.meal-content');box.innerHTML='<p>طلبات هذا المتصفح. يمكنك أيضًا إدخال رمز متابعة احتفظت به.</p>';
