@@ -2,7 +2,7 @@
 'use strict';
 const mealStatus={pending:'بانتظار قبول المطبخ',accepted:'تم قبول الطلب',preparing:'قيد التحضير',ready:'جاهز للاستلام أو التوصيل',delivered:'تم التسليم',rejected:'اعتذر المطبخ',cancelled:'ملغى',expired:'مرّ الموعد دون قبول'};
 const mealDate=v=>new Intl.DateTimeFormat('ar-MA',{timeZone:'Africa/Casablanca',dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
-const peopleLabel=n=>Number(n)===1?'شخصًا واحدًا':Number(n)===2?'شخصين':`${n} أشخاص`;
+const peopleLabel=n=>Number(n)===1?'شخصًا واحدًا':Number(n)===2?'شخصين':`${n} ${Number(n)<=10?'أشخاص':'شخصًا'}`;
 const mealMoney=v=>`${Number(v).toFixed(2)} درهم`;
 const mealEffectiveStatus=o=>o.status==='pending'&&new Date(o.order_until)<=new Date()?'expired':o.status;
 function mealLocalToISO(value){
@@ -14,7 +14,7 @@ function mealLocalToISO(value){
 }
 async function mealRpc(name,args){const{data,error}=await db.rpc(name,args);if(error)throw Error(mealError(error.message));return data;}
 function mealError(message){
- const known={'subscription_reference_once':'مرجع الأداء مسجل من قبل. راجع المرجع أو تواصل مع الإدارة.','payment instructions unavailable':'لم تتوفر تعليمات الأداء بعد.','subscription required':'يحتاج اشتراك المطبخ إلى تأكيد أو تجديد.','invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','invalid requested time':'اختر موعدًا مستقبلًا خلال الستين يومًا القادمة.','invalid portion':'حدد عدد الأشخاص الذين يكفيهم الطبق.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','invalid dates':'راجع المواعيد: آخر أجل قبل الجاهزية، وخلال الستين يومًا القادمة.'};
+ const known={'subscription_reference_once':'مرجع الأداء مسجل من قبل. راجع المرجع أو تواصل مع الإدارة.','payment instructions unavailable':'لم تتوفر تعليمات الأداء بعد.','subscription required':'يحتاج اشتراك المطبخ إلى تأكيد أو تجديد.','invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','invalid requested time':'اختر موعدًا مستقبلًا خلال الستين يومًا القادمة.','invalid portion':'حدد عدد الأشخاص الذين يكفيهم الطبق.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','kitchen settings required':'حدد طريقة الاستلام في بيانات مطبخك أولًا.','invalid work days':'اختر أيام العمل من الأزرار الظاهرة.'};
  return Object.entries(known).find(([key])=>String(message).includes(key))?.[1]||'تعذر إتمام العملية. راجع البيانات وحاول مجددًا.';
 }
 async function mealBusy(button,work){const label=button.textContent;button.disabled=true;try{await work();}catch(err){showToast(err.message||'تعذر الاتصال. حاول مجددًا.');}finally{button.disabled=false;button.textContent=label;}}
@@ -29,15 +29,15 @@ async function openMyMealOffers(){
  const rows=await mealRpc('chef_meal_offers',{p_session_token:chefSessionToken}),screen=mealPanel('myMealOffers','أطباق مطبخي'),box=screen.querySelector('.meal-content');
  screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='';
  box.append(mealAction('تحديث',openMyMealOffers));if(!rows.length)box.insertAdjacentHTML('beforeend','<p>أضف أول طبق لاستقبال الطلبات.</p>');
- rows.forEach(o=>{const card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)}</h2><p>طبق واحد يكفي ${peopleLabel(o.serves)} · ${mealMoney(o.price)}</p><p>${o.active?'متاح للطلب — يُحضّر حسب الطلب':'غير متاح مؤقتًا'}</p>`;card.append(mealAction(o.active?'إيقاف طلب هذا الطبق مؤقتًا':'إتاحة هذا الطبق مجددًا',async()=>{await mealRpc('meal_offer_availability',{p_session_token:chefSessionToken,p_offer_id:o.id,p_active:!o.active});await openMyMealOffers();}));box.append(card);});showScreen(screen.id);
+ rows.forEach(o=>{const card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)}</h2><p>طبق واحد يكفي ${peopleLabel(o.serves)} · ${mealMoney(o.price)}</p><p>${o.active?'متاح للطلب — يُحضّر حسب الطلب':'غير متاح مؤقتًا'}</p>`;card.append(mealAction('تعديل هذا الطبق',()=>openMealOfferForm(o)));card.append(mealAction(o.active?'إيقاف طلب هذا الطبق مؤقتًا':'إتاحة هذا الطبق مجددًا',async()=>{await mealRpc('meal_offer_availability',{p_session_token:chefSessionToken,p_offer_id:o.id,p_active:!o.active});await openMyMealOffers();}));box.append(card);});showScreen(screen.id);
 }
 let selectedMealOffer=null,mealOffers=[],mealRequest=null;
 async function openMealOrdering(chef){
  activeChef=chef;selectedMealOffer=null;mealRequest=null;
  document.getElementById('orderChefName').textContent=`${prefix(chef.gender)} ${chef.name}`;document.getElementById('orderChefArea').textContent=chef.area||'الدار البيضاء';
  const list=document.getElementById('dishList');list.innerHTML='<p>جاري تحميل الوجبات المتاحة للحجز...</p>';document.getElementById('mealOrderFields').hidden=true;showScreen('orderModal');
- const{data,error}=await db.from('meal_offers').select('*').eq('chef_id',chef.id).eq('active',true).order('created_at');
- if(activeChef?.id!==chef.id)return;if(error){list.innerHTML='<p>تعذر تحميل الوجبات. ارجع إلى قائمة المطابخ وحاول مجددًا.</p>';return;}
+ const [offerResult,dayResult]=await Promise.all([db.from('meal_offers').select('*').eq('chef_id',chef.id).eq('active',true).order('created_at'),db.rpc('public_kitchen_workdays')]);const {data,error}=offerResult;
+ if(activeChef?.id!==chef.id)return;let days=document.getElementById('orderKitchenDays');if(!days){days=document.createElement('p');days.id='orderKitchenDays';document.querySelector('.order-meals').prepend(days);}days.textContent=kitchenDaysLabel((dayResult.data||[]).find(x=>x.chef_id===chef.id)?.work_days)+' — يمكنك اقتراح موعد يناسبك، ويؤكده المطبخ.';if(error){list.innerHTML='<p>تعذر تحميل الوجبات. ارجع إلى قائمة المطابخ وحاول مجددًا.</p>';return;}
  mealOffers=data||[];
  list.innerHTML=mealOffers.length?'':'<p>لا توجد وجبات متاحة للحجز حاليًا من هذا المطبخ.</p>';
  mealOffers.forEach(o=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed','false');b.className='dish-option meal-card';const img=safeImageUrl(o.image_url);b.innerHTML=`${img?`<img class="dish-option-image" src="${escapeHtml(img)}" alt="${escapeHtml(o.dish_name)}">`:''}<span><strong>${escapeHtml(o.dish_name)} — ${mealMoney(o.price)}</strong><span>طبق واحد يكفي ${peopleLabel(o.serves)}، والثمن للطبق كاملًا.</span><span>يُحضّر حسب الطلب — اختر الموعد المناسب لك أدناه.</span>${o.ingredients?`<span>المكونات: ${escapeHtml(o.ingredients)}</span>`:''}</span>`;b.onclick=()=>selectMealOffer(o,b);list.append(b);});

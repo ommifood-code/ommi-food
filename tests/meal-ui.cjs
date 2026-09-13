@@ -10,15 +10,18 @@ const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'h
 const w=dom.window,ctx=dom.getInternalVMContext();
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
 const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,serves:4,ingredients:'قمح وخضر',active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
-const calls=[];let placed;let paymentPending=false;
+const calls=[];let placed;let kitchenDefaults=null;let paymentPending=false;
 const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
  case 'chef_subscription':return{data:{amount:50,membership:'none',instructions:'تعليمات اختبار',payments:paymentPending?[{id:'p',reference:'REF-TEST',status:'pending'}]:[]}};
  case 'submit_subscription_payment':paymentPending=true;return{data:'p'};
  case 'chef_session_status':return{data:[chef]};
  case 'chef_correction_status':return{data:[]};
  case 'chef_secure_save':return{data:null};
- case 'chef_meal_defaults':return{data:null};
- case 'chef_publish_meal':return{data:'new-offer'};
+ case 'chef_meal_defaults':return{data:kitchenDefaults};
+ case 'public_kitchen_workdays':return{data:[{chef_id:chef.id,work_days:'الجمعة'}]};
+ case 'chef_order_settings':if(args.p_settings)kitchenDefaults={...args.p_settings,configured:true,work_days:args.p_settings.work_days.join('، ')};return{data:kitchenDefaults||{configured:false}};
+ case 'chef_update_meal':return{data:null};
+ case 'chef_publish_meal':if(args.p_offer.fulfilment_type)kitchenDefaults={...args.p_offer,configured:true,work_days:(args.p_offer.work_days||[]).join('، ')};return{data:'new-offer'};
  case 'public_kitchen_locations':return{data:[{chef_id:chef.id,lat:33.573,lng:-7.623}]};
  case 'chef_location':return{data:null};
  case 'chef_meal_offers':return{data:[offer]};
@@ -30,7 +33,7 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
 const query=table=>({select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:table==='chefs'?[chef]:[offer]})}});
 w.supabase={createClient:()=>({rpc,from:query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
 w.localStorage.setItem('ommi_chef_session','test-session');
-for(const file of ['app.js','dish-images.js','meal-orders.js','nearby.js','simple-launch.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
+for(const file of ['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
 const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
@@ -47,7 +50,7 @@ function field(id,value){w.document.getElementById(id).value=value;}
  const form=w.document.getElementById('mealOfferForm');
  for(const[k,v]of Object.entries({specialty:'أكلات تقليدية وشعبية',dish_name:'كسكس',price:'40',serves_choice:'4',pickup_instructions:'عنوان خاص للاختبار'}))form.elements[k].value=v;
  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
- assert.equal(w.document.querySelector('.screen.active').id,'myMealOffers');
+ assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','save returns to my kitchen');
 
  const payload=calls.find(c=>c[0]==='chef_publish_meal')[1].p_offer;
  assert.equal(payload.serves,4);assert.ok(!('quantity' in payload));assert.ok(!('ready_at' in payload));assert.ok(!('order_until' in payload));assert.equal(payload.ingredients,'');
@@ -76,12 +79,23 @@ function field(id,value){w.document.getElementById(id).value=value;}
  const saveLink=[...w.document.querySelectorAll('#customerMealTracking button')].find(b=>b.textContent==='حفظ رابط طلبي');saveLink.click();await tick();
  const link=w.document.querySelector('input[aria-label="رابط طلبي الخاص"]').value;assert.equal(new URL(link).search,'');assert.equal(new URL(link).hash,'#order='+placed.p_access_token);
  assert.doesNotMatch(w.document.body.textContent,/50 درهمًا|اشتراك المطبخ/);
- await w.openKitchenEditor(chef,'edit');
- await w.document.getElementById('submitKitchenBtn').onclick();
- assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','saving returns to dashboard');
+ await w.openKitchenPreferences();
+ const prefs=w.document.querySelector('#kitchenPreferences form');prefs.querySelector('[data-all-days]').click();
+ assert.equal(prefs.querySelectorAll('[name=work_day]:checked').length,7);
+ prefs.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
+ assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
+ assert.equal(calls.find(x=>x[0]==='chef_order_settings'&&x[1].p_settings)[1].p_settings.work_days.length,7);
+ await w.openMealOfferForm();
+ const second=w.document.getElementById('mealOfferForm');assert.equal(second.elements.fulfilment_type,undefined,'shared kitchen settings not repeated');
+ second.elements.dish_name.value='رفيسة';second.elements.price.value='240';second.elements.serves_choice.value='more';second.elements.serves_choice.dispatchEvent(new w.Event('change'));second.elements.serves_more.value='12';
+ assert.equal(second.elements.serves_more.required,true);assert.equal(second.querySelector('#servesMoreLabel').hidden,false);
+ const another=second.querySelector('[value=another]');second.dispatchEvent(new w.SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:another}));await tick();
+ assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor');assert.equal(w.document.querySelector('[name=dish_name]').value,'');
+ const secondPayload=calls.filter(x=>x[0]==='chef_publish_meal').at(-1)[1].p_offer;assert.equal(secondPayload.serves,12);assert.ok(!('fulfilment_type' in secondPayload));
+ await w.openMealOfferForm({...offer,serves:12});const edit=w.document.getElementById('mealOfferForm');assert.equal(edit.elements.serves_choice.value,'more');assert.equal(edit.elements.serves_more.value,'12');edit.elements.price.value='80';edit.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();assert.equal(calls.filter(x=>x[0]==='chef_update_meal').at(-1)[1].p_dish.price,80);
  await w.loadChefs();
  assert.equal(w.document.querySelectorAll('script[src*=leaflet]').length,0,'map not loaded by discovery');
- assert.ok(w.document.querySelector('.nearby-card'));
+ assert.ok(w.document.querySelector('.nearby-card'));assert.match(w.document.querySelector('.nearby-card').textContent,/الجمعة/);
  assert.ok(vm.runInContext("nearDistance([33.57,-7.62],[33.58,-7.62])",ctx)>1);
  w.document.querySelector('.nearby-card').click();await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'orderModal');
