@@ -6,6 +6,7 @@ const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
+assert.match(fs.readFileSync(path.join(root,'simple-launch.js'),'utf8'), /async function openMealOfferForm\(/, 'meal editor has an explicit declaration for strict browser scripts');
 const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'https://test.invalid',runScripts:'outside-only'});
 const w=dom.window,ctx=dom.getInternalVMContext();
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
@@ -45,6 +46,8 @@ function field(id,value){w.document.getElementById(id).value=value;}
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
+ w.document.querySelector('#mealActions button').click();await tick();
+ assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor','dashboard add meal button opens editor');
  const savedDishes=chef.dishes;chef.dishes=[];await w.openMealOfferForm(chef);assert.ok(w.document.querySelector('[name=dish_name]'),'first meal without saved dish');chef.dishes=savedDishes;
  await w.openMealOfferForm(chef);
  const form=w.document.getElementById('mealOfferForm');
