@@ -1,0 +1,34 @@
+begin;
+do $$
+declare r jsonb;c uuid;t text;oid uuid;offer uuid;req uuid:=gen_random_uuid();d jsonb:='{"name":"كسكس اختبار","price":160}';p jsonb;blocked boolean;
+begin
+ r:=public.chef_register('اختبار الطبخ عند الطلب','0600000091','casablanca','الدار البيضاء','اختبار','m','483927');c:=(r->>'chef_id')::uuid;t:=r->>'session_token';
+ p:=jsonb_build_object('specialty','أكلات تقليدية وشعبية','serves',4,'fulfilment_type','pickup','pickup_instructions','عنوان خاص للاختبار');
+ execute 'set local role anon';
+ offer:=public.chef_publish_meal(t,d,p,req);
+ if public.chef_publish_meal(t,d,p,req)<>offer then raise exception 'FAIL duplicate meal';end if;
+ if public.chef_meal_defaults(t)->>'pickup_instructions'<>'عنوان خاص للاختبار' then raise exception 'FAIL private defaults';end if;
+ r:=public.place_meal_order(offer,2,jsonb_build_object('name','زبون الاختبار','phone','0600000092','requested_at',now()+interval '2 days','price',1),'pickup',repeat('c',64));
+ r:=public.customer_meal_order(repeat('c',64));
+ if r->>'status'<>'pending' or (r->>'total')::numeric<>320 or (r->>'serves')::integer<>4 or (r->>'quantity')::integer<>2 then raise exception 'FAIL request agreement';end if;
+ if r->>'pickup_instructions' is not null then raise exception 'FAIL private address';end if;
+ blocked:=false;begin perform public.customer_meal_order(repeat('b',64));exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL wrong tracking token';end if;
+ blocked:=false;begin perform public.admin_contacted_meal_order(gen_random_uuid());exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL unauthorized admin';end if;
+ execute 'reset role';
+ select id into oid from public.orders where order_ref=r->>'order_ref';
+ update public.meal_offers set price=200,serves=5 where id=offer;
+ r:=public.customer_meal_order(repeat('c',64));if (r->>'total')::numeric<>320 or (r->>'serves')::integer<>4 then raise exception 'FAIL snapshot';end if;
+ blocked:=false;begin perform public.chef_meal_order_status('wrong',oid,'accepted');exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL wrong owner';end if;
+ perform public.chef_meal_order_status(t,oid,'accepted');
+ if public.customer_meal_order(repeat('c',64))->>'pickup_instructions' is null then raise exception 'FAIL accepted pickup';end if;
+ perform public.chef_meal_order_status(t,oid,'cancelled','اختبار');perform public.chef_meal_order_status(t,oid,'cancelled','اختبار');
+ perform public.meal_offer_availability(t,offer,false);
+ blocked:=false;begin perform public.place_meal_order(offer,10,jsonb_build_object('name','زبون الاختبار','phone','0600000092','requested_at',now()+interval '1 day'),'pickup',repeat('d',64));exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL unavailable dish';end if;
+ perform public.meal_offer_availability(t,offer,true);
+ blocked:=false;begin perform public.place_meal_order(offer,10,'{"name":"زبون الاختبار","phone":"0600000092"}','pickup',repeat('d',64));exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL missing customer time';end if;
+ r:=public.place_meal_order(offer,10,jsonb_build_object('name','زبون الاختبار','phone','0600000092','requested_at',now()+interval '1 day'),'pickup',repeat('d',64));
+ if (r->>'total')::numeric<>2000 then raise exception 'FAIL no inventory order';end if;
+ if has_table_privilege('anon','public.orders','select') or has_table_privilege('anon','public.meal_pickup_details','select') then raise exception 'FAIL private grants';end if;
+end $$;
+rollback;
+select 'PASS: no-stock publishing, optional ingredients, serving/price snapshot, customer time, pending acceptance, owner check, privacy, availability, cancellation' result;

@@ -34,3 +34,8 @@
 - tests/simple-launch.sql: معاملة اختبار تتراجع بالكامل؛ الموقع الخاص/التقريبي، الصلاحيات، نطاق المدينة، نشر الوجبة مع الطبق، منع التكرار، قبول الطلب والحصص والإلغاء والتعليق.
 - tests/meal-ui.cjs: اختبار DOM بمضاعف لخدمة البيانات؛ الإنشاء والحجز والإجمالي والرمز الخاص والقائمة والتحميل الاختياري.
 - لا يعوض الاختبار البرمجي اختبار سهولة الاستخدام مع مستخدم فعلي.
+
+
+## Cook-to-order update — 2026-09-13
+Supersedes the scheduled-stock model above. Dish inventory and cook-specified deadlines are removed. A published dish describes a whole priced unit serving an explicit number of people. Customer quantity counts those units, not people; the server snapshots serves, price, quantity and the customer-requested time. The cook accepts that request or declines. Pending requests cease to be acceptable once their requested time passes; this is not a promise of preparation time. No stock allocation or replenishment exists. Ingredients optional. Additional dishes reuse private fulfilment defaults. Existing kitchen workday settings remain informational and do not block requests.
+Admin sees pending requests first, age, kitchen phone, and last manual call timestamp. Refresh once per minute only while visible. A call does not accept an order. No background SMS, push or email is claimed. Off-app negotiations remain possible; the app shows the submitted request, and cannot infer changed amounts from a phone call. No commissions or billing activated.

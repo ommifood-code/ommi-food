@@ -20,3 +20,5 @@ Frontend requires these migrations. Existing registration and kitchen-save RPC s
 ## Acceptance before public launch
 
 Use one authorized test kitchen and customer: schedule a meal, place request, accept, prepare, mark ready, deliver, confirm receipt and submit/resolve a complaint. Test on mobile. No SMS, payment service, subscription, driver dispatch or automatic notifications are enabled. Both parties refresh their order lists manually. Phone-based request throttling is basic and is not IP/device abuse protection. Pending requests do not reserve capacity; only acceptance does. Chef publication verification remains mandatory.
+
+Current cook-to-order model: run cook-to-order.sql and meal-ui.cjs. Previous SQL fixtures have been adapted to customer-chosen times; stock assertions are removed. No live fixtures persist.
