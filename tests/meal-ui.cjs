@@ -11,6 +11,7 @@ const dom=new JSDOM(fs.readFileSync(path.join(root,'index.html'),'utf8'),{url:'h
 const w=dom.window,ctx=dom.getInternalVMContext();w.confirm=()=>true;
 const chef={id:'chef-test',name:'كريم',gender:'m',area:'معاريف',specialty:'أكلات تقليدية وشعبية',work_days:'الجمعة',fulfilment_type:'both',dishes:[{name:'كسكس',price:40}]};
 const offer={id:'offer-test',chef_id:chef.id,dish_name:'كسكس',price:40,serves:4,ingredients:'قمح وخضر',active:true,order_until:'2030-09-08T10:00:00Z',ready_at:'2030-09-09T12:00:00Z',fulfilment_type:'both',delivery_fee:15,delivery_areas:['معاريف']};
+let overviewOffers=null,overviewOrders=[];
 const calls=[];let placed;let kitchenDefaults=null;let paymentPending=false;
 const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
  case 'chef_subscription':return{data:{amount:50,membership:'none',instructions:'تعليمات اختبار',payments:paymentPending?[{id:'p',reference:'REF-TEST',status:'pending'}]:[]}};
@@ -25,8 +26,9 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
  case 'chef_publish_meal':if(args.p_offer.fulfilment_type)kitchenDefaults={...args.p_offer,configured:true,work_days:(args.p_offer.work_days||[]).join('، ')};return{data:'new-offer'};
  case 'public_kitchen_locations':return{data:[{chef_id:chef.id,lat:33.573,lng:-7.623}]};
  case 'chef_location':return{data:null};
- case 'chef_meal_offers':return{data:[offer]};
- case 'chef_meal_orders':return{data:[]};
+ case 'chef_meal_offers':return{data:overviewOffers||[offer]};
+ case 'chef_meal_orders':return{data:overviewOrders};
+ case 'chef_meal_order_status':overviewOrders=overviewOrders.map(o=>o.id===args.p_order_id?{...o,status:args.p_status}:o);return{data:null};
  case 'place_meal_order':placed=args;return{data:{order_ref:'OF-test',total:95}};
  case 'customer_meal_order':return{data:{order_ref:'OF-test',status:'pending',chef_phone:'0600000000',dish_name:'كسكس',serves:4,unit_price:40,quantity:2,total:95,ready_at:offer.ready_at,order_until:offer.order_until,received_confirmed:null,would_repeat:null}};
  default:return{error:{message:'unexpected RPC '+name}};
@@ -34,7 +36,7 @@ const rpc=async(name,args)=>{calls.push([name,args]);switch(name){
 const query=table=>({select(){return this},eq(){return this},gt(){return this},order(){return Promise.resolve({data:table==='chefs'?[chef]:[offer]})}});
 w.supabase={createClient:()=>({rpc,from:query})};w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
 w.localStorage.setItem('ommi_chef_session','test-session');
-for(const file of ['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
+for(const file of ['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js','kitchen-overview.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file}).runInContext(ctx);
 const tick=()=>new Promise(r=>setTimeout(r,30));
 function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
@@ -47,7 +49,8 @@ function field(id,value){w.document.getElementById(id).value=value;}
  assert.match(w.document.getElementById('toast').textContent,/اختر الجنس/);
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
- assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
+ assert.equal(w.document.querySelectorAll('#mealActions button').length,2);await tick();assert.match(w.document.getElementById('kitchenDishCards').textContent,/كسكس/,'saved dish directly on dashboard');assert.match(w.document.getElementById('kitchenOrderCards').textContent,/لا توجد طلبات/);
+ overviewOffers=Array.from({length:15},(_,i)=>({...offer,id:'dish-'+i}));overviewOrders=[{id:'order-1',status:'pending',dish_name:'كسكس',quantity:2,serves:4,unit_price:40,total:80,customer_name:'زبون اختبار',customer_phone:'0600000000',fulfilment_type:'pickup',ready_at:'2099-01-01T12:00:00Z',order_until:'2099-01-01T12:00:00Z'}];await w.loadKitchenOverview(chef);assert.equal(w.document.querySelectorAll('.kitchen-dish-card').length,15,'all dishes directly visible');assert.match(w.document.getElementById('kitchenPendingSummary').textContent,/1 طلب/);w.document.querySelector('#kitchenOrderCards .meal-card button').click();await tick();assert.equal(overviewOrders[0].status,'accepted');assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','accept stays on overview');overviewOffers=null;overviewOrders=[];await w.loadKitchenOverview(chef); 
  for(const el of [w.document.body,w.document.querySelector('main'),w.document.getElementById('chefKitchenDashboard'),w.document.querySelector('#chefKitchenDashboard .content'),w.document.querySelector('#chefKitchenDashboard .topbar')]){el.click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','blank areas and logo do not navigate');}
  w.document.querySelector('#chefKitchenDashboard [data-home]').click();assert.equal(w.document.querySelector('.screen.active').id,'home','logo opens home');w.openKitchenDashboard(chef);
  w.document.getElementById('myKitchenHome').click();assert.equal(w.document.querySelector('.screen.active').id,'home','explicit back arrow works');w.openKitchenDashboard(chef);

@@ -90,15 +90,17 @@ function openMyMealReceipts(){
  for(const r of readMealReceipts())box.append(mealAction(r.ref,()=>openCustomerMealOrder(r.token)));
  const f=document.createElement('form');f.className='meal-form';f.innerHTML='<label>رمز المتابعة الخاص<input name="token" class="field" required pattern="[0-9a-f]{64}" autocomplete="off"></label><button class="primary">متابعة الطلب</button>';f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),()=>openCustomerMealOrder(f.elements.token.value.trim()));};box.append(f);showScreen(screen.id);
 }
-async function openChefMealOrders(){
- const orders=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken}),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>اقبل الطلب فقط إذا استطعت تحضير العدد المطلوب في موعد الزبون. التنبيه يتحدث أثناء فتح التطبيق.</p>';orders.sort((a,b)=>Number(mealEffectiveStatus(b)==='pending')-Number(mealEffectiveStatus(a)==='pending'));box.append(mealAction('تحديث الطلبات',openChefMealOrders));
- if(!orders.length)box.insertAdjacentHTML('beforeend','<p>لا توجد طلبات بعد.</p>');
- orders.forEach(o=>{
+function chefOrderCard(o,refresh){
  const s=mealEffectiveStatus(o),card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)} — ${o.quantity} × طبق</h2><strong>${escapeHtml(mealStatus[s]||s)}</strong><p>${escapeHtml(o.customer_name)} · <a href="tel:${escapeHtml(o.customer_phone)}">${escapeHtml(o.customer_phone)}</a></p><p>${o.fulfilment_type==='pickup'?'الاستلام من المطبخ':`التوصيل: ${escapeHtml(o.delivery_area)} — ${escapeHtml(o.customer_address)}`}</p><p>كل طبق يكفي ${peopleLabel(o.serves||"—")} · ثمن الطبق ${mealMoney(o.unit_price)}</p><p>الموعد المطلوب: ${mealDate(o.ready_at)} · الإجمالي ${mealMoney(o.total)}</p>${o.notes?`<p>ملاحظة الزبون: ${escapeHtml(o.notes)}</p>`:''}`;
  const transitions={pending:[['accepted','قبول العدد والموعد المطلوبين'],['rejected','الاعتذار عن الطلب']],accepted:[['preparing','بدء التحضير'],['cancelled','إلغاء الطلب']],preparing:[['ready','الطلب جاهز'],['cancelled','إلغاء الطلب']],ready:[['delivered','تم التسليم'],['cancelled','إلغاء الطلب']]};
  const reason=document.createElement('input');reason.hidden=true;reason.className='field';reason.placeholder='سبب الاعتذار أو الإلغاء';reason.maxLength=500;if(transitions[s])card.append(reason);
- for(const[next,label]of transitions[s]||[])card.append(mealAction(label,async()=>{if(['rejected','cancelled'].includes(next)&&reason.value.trim().length<3){reason.hidden=false;reason.focus();throw Error('اكتب سبب الاعتذار أو الإلغاء ثم اضغط مرة أخرى.');}await mealRpc('chef_meal_order_status',{p_session_token:chefSessionToken,p_order_id:o.id,p_status:next,p_reason:reason.value});await openChefMealOrders();}));box.append(card);
- });showScreen(screen.id);
+ for(const[next,label]of transitions[s]||[])card.append(mealAction(label,async()=>{if(['rejected','cancelled'].includes(next)&&reason.value.trim().length<3){reason.hidden=false;reason.focus();throw Error('اكتب سبب الاعتذار أو الإلغاء ثم اضغط مرة أخرى.');}await mealRpc('chef_meal_order_status',{p_session_token:chefSessionToken,p_order_id:o.id,p_status:next,p_reason:reason.value});await refresh();}));return card;
+
+}
+async function openChefMealOrders(){
+ const orders=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken}),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>اقبل الطلب فقط إذا استطعت تحضير العدد المطلوب في موعد الزبون. التنبيه يتحدث أثناء فتح التطبيق.</p>';orders.sort((a,b)=>Number(mealEffectiveStatus(b)==='pending')-Number(mealEffectiveStatus(a)==='pending'));box.append(mealAction('تحديث الطلبات',openChefMealOrders));
+ if(!orders.length)box.insertAdjacentHTML('beforeend','<p>لا توجد طلبات بعد.</p>');
+ orders.forEach(o=>box.append(chefOrderCard(o,openChefMealOrders)));showScreen(screen.id);
 }
 document.getElementById('mealQuantity').addEventListener('input',updateMealTotal);
 document.getElementById('mealFulfilment').addEventListener('change',updateMealTotal);
