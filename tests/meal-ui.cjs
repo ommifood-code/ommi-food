@@ -48,10 +48,13 @@ function field(id,value){w.document.getElementById(id).value=value;}
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
- for(const el of [w.document.body,w.document.querySelector('main'),w.document.getElementById('chefKitchenDashboard'),w.document.querySelector('#chefKitchenDashboard .content'),w.document.querySelector('#chefKitchenDashboard .topbar'),w.document.querySelector('#chefKitchenDashboard .mini-logo')]){el.click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','blank areas and logo do not navigate');}
+ for(const el of [w.document.body,w.document.querySelector('main'),w.document.getElementById('chefKitchenDashboard'),w.document.querySelector('#chefKitchenDashboard .content'),w.document.querySelector('#chefKitchenDashboard .topbar')]){el.click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','blank areas and logo do not navigate');}
+ w.document.querySelector('#chefKitchenDashboard [data-home]').click();assert.equal(w.document.querySelector('.screen.active').id,'home','logo opens home');w.openKitchenDashboard(chef);
  w.document.getElementById('myKitchenHome').click();assert.equal(w.document.querySelector('.screen.active').id,'home','explicit back arrow works');w.openKitchenDashboard(chef);
  w.document.querySelector('#mealActions button').click();await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor','dashboard add meal button opens editor');
+ w.document.querySelector('#mealOfferEditor .meal-content').click();assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor');w.document.querySelector('#mealOfferEditor .back').click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','back returns one step');
+ await w.openKitchenSettings(chef);await w.openKitchenPreferences();w.document.querySelector('.screen.active .back').click();assert.equal(w.document.querySelector('.screen.active').id,'kitchenSettings','back follows actual origin');w.document.querySelector('.screen.active [data-home]').click();assert.equal(w.document.querySelector('.screen.active').id,'home');w.openKitchenDashboard(chef);
  const savedDishes=chef.dishes;chef.dishes=[];await w.openMealOfferForm(chef);assert.ok(w.document.querySelector('[name=dish_name]'),'first meal without saved dish');chef.dishes=savedDishes;
  await w.openMealOfferForm(chef);
  const form=w.document.getElementById('mealOfferForm');
