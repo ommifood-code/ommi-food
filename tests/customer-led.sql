@@ -1,0 +1,32 @@
+do $$
+declare r jsonb;c uuid;t text;dish uuid;req uuid;token text:=repeat('b',64);blocked boolean;ver integer;
+begin
+ r:=public.chef_register('اختبار الرغبة','0600000091','casablanca','الدار البيضاء','اختبار','m','483927');c:=(r->>'chef_id')::uuid;t:=r->>'session_token';
+ perform public.chef_order_settings(t,'{"fulfilment_type":"pickup","pickup_instructions":"عنوان اختبار خاص","work_days":["الجمعة"]}');
+ execute 'set local role anon';
+ dish:=public.chef_save_reference_dish(t,null,'{"name":"كسكس","price":40}','{"specialty":"أكلات تقليدية وشعبية","group_pricing":true}',gen_random_uuid());
+ r:=public.food_request_create(c,dish,5,jsonb_build_object('name','زبون اختبار','phone','0600000092','requested_at',now()+interval '2 days'),token);
+ if (r->>'estimate')::numeric<>200 then raise exception 'FAIL estimate';end if;
+ if public.food_request_create(c,dish,5,jsonb_build_object('name','زبون اختبار','phone','0600000092','requested_at',now()+interval '2 days'),token)->>'order_ref'<>r->>'order_ref' then raise exception 'FAIL idempotent';end if;
+ r:=public.food_request_customer(token);req:=(r->>'id')::uuid;if r?'access_hash' then raise exception 'FAIL secret';end if;
+ blocked:=false;begin perform public.food_request_chef_action('wrong',req,'discussing');exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL ownership';end if;
+ perform public.food_request_chef_action(t,req,'discussing');
+ perform public.food_request_chef_action(t,req,'propose',jsonb_build_object('dish','كسكس','people',3,'total',95,'at',now()+interval '2 days','fulfilment','الاستلام من المطبخ حسب الاتفاق'));
+ r:=public.food_request_customer(token);ver:=(r->>'agreement_version')::integer;
+ blocked:=false;begin perform public.food_request_customer_action(token,'agree',jsonb_build_object('version',ver-1));exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL stale agreement';end if;
+ perform public.food_request_customer_action(token,'agree',jsonb_build_object('version',ver));
+ r:=public.food_request_customer(token);if (r->>'people')::int<>5 or (r->>'agreed_people')::int<>3 or r->>'status'<>'accepted' then raise exception 'FAIL snapshots';end if;
+ blocked:=false;begin perform public.food_request_customer_action(token,'rate','{"rating":5}');exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL unreceived review';end if;
+ perform public.food_request_chef_action(t,req,'delivered');
+ if public.food_request_customer(token)->>'received_at' is not null then raise exception 'FAIL unilateral delivery';end if;
+ perform public.food_request_chef_action(t,req,'reminder');
+ blocked:=false;begin perform public.food_request_chef_action(t,req,'reminder');exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL reminder cap';end if;
+ perform public.food_request_customer_action(token,'received');perform public.food_request_customer_action(token,'rate','{"rating":4,"feedback":"تجربة اختبار"}');
+ blocked:=false;begin perform public.food_request_customer_action(token,'rate','{"rating":5}');exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL duplicate review';end if;
+ r:=public.food_request_create(c,null,15,jsonb_build_object('dish','طبق غير موجود','name','زبون اختبار','phone','0600000092','requested_at',now()+interval '2 days'),repeat('c',64));if r->>'estimate' is not null then raise exception 'FAIL fabricated price';end if;
+ if has_table_privilege('anon','public.food_requests','select') or has_table_privilege('authenticated','public.food_requests','select') or has_table_privilege('anon','public.food_request_events','select') then raise exception 'FAIL privacy';end if;
+ blocked:=false;begin perform public.food_request_admin();exception when others then blocked:=true;end;if not blocked then raise exception 'FAIL admin';end if;
+ if (select rating_count from public.food_request_reputation() where chef_id=c)<>1 then raise exception 'FAIL reputation';end if;
+ execute 'reset role';
+ if (select count(*) from public.food_request_events where request_id=req)<7 then raise exception 'FAIL events';end if;
+end $$;

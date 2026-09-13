@@ -42,3 +42,7 @@ Admin sees pending requests first, age, kitchen phone, and last manual call time
 
 ## Consistency review — 2026-09-13
 See PRODUCT_DECISIONS.md for the current acceptance criteria. Shared preferences are stored privately in chef_kitchen_profiles; public_kitchen_workdays exposes only usual days for eligible kitchens. chef_order_settings updates defaults for future requests while order pickup snapshots remain immutable. Add-another reuses settings; save returns to the dashboard. Published dishes can be edited directly, preserving order snapshots. The customer chooses time; days are informational, not a request filter. Static build includes kitchen-settings.js.
+
+
+## إطلاق منهج الطلب حسب رغبة الزبون — المرجع الحالي
+راجع PRODUCT_DECISIONS.md. طلبات المنهج الجديد في food_requests، والطلبات القديمة في orders دون إعادة تفسير الأسعار أو الأعداد. اختبارات الواجهة: tests/meal-ui.cjs؛ اختبار قاعدة البيانات tests/customer-led.sql داخل BEGIN/ROLLBACK. لا تُشغّل الاختبار دون معاملة قابلة للتراجع.

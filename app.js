@@ -3,13 +3,13 @@ const SUPABASE_KEY='sb_publishable__by9VCo0-kgc7x5msoXB4A_P5r-UoQQ';
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const citySelect=document.getElementById('citySelect'),comingModal=document.getElementById('comingModal'),orderModal=document.getElementById('orderModal'),joinModal=document.getElementById('joinModal'),toast=document.getElementById('toast');let chefsCache=[],activeChef=null,activeDish=null,joinGender='',currentChefId=null,currentChefName='',currentChefArea='',currentChefGender='f';
 function prefix(g){return g==='m'?'عمّي':'أمّي'}function cleanName(v){return(v||'').replace(/^(أمّي|أمي|امي|عمّي|عمي|Ommi|Oncle)\s*/i,'').trim()}const screenTrail=[];
 const editBaselines=new WeakMap();
-function editSnapshot(root){return JSON.stringify([...root.querySelectorAll('input,select,textarea')].filter(el=>!el.readOnly&&!['submit','button'].includes(el.type)).map(el=>[el.name||el.id,el.type==='file'?[...el.files].map(f=>[f.name,f.size,f.lastModified]):el.type==='checkbox'||el.type==='radio'?el.checked:el.value]));}
+function editSnapshot(root){return JSON.stringify([...(root.elements||root.querySelectorAll('input,select,textarea'))].filter(el=>!el.readOnly&&!['submit','button'].includes(el.type)).map(el=>[el.name||el.id,el.type==='file'?[...el.files].map(f=>[f.name,f.size,f.lastModified]):el.type==='checkbox'||el.type==='radio'?el.checked:el.value]));}
 function editScopes(root){return [...root.querySelectorAll('form'),...(root.matches('.modal')&&!root.querySelector('form')?[root]:[])];}
 function markFormSaved(root){if(root)editBaselines.set(root,editSnapshot(root));}
 function watchEdits(root){editScopes(root).forEach(markFormSaved);}
 function visibleEdits(){return [...document.querySelectorAll('.screen.active form,.modal.open form,.modal.open')].filter(root=>editBaselines.has(root)&&editSnapshot(root)!==editBaselines.get(root));}
 function allowDiscardEdits(){const dirty=visibleEdits();if(!dirty.length)return true;if(!window.confirm('لديك تعديلات لم تُحفظ. هل تريد المغادرة دون حفظ؟ اختر إلغاء للبقاء وإكمالها.'))return false;dirty.forEach(markFormSaved);return true;}
-document.addEventListener('focusin',event=>{const root=event.target.closest('form,.modal');if(root&&!editBaselines.has(root))markFormSaved(root);});
+document.addEventListener('focusin',event=>{const root=event.target.form||event.target.closest('form,.modal');if(root&&!editBaselines.has(root))markFormSaved(root);});
 window.addEventListener('beforeunload',event=>{if(visibleEdits().length){event.preventDefault();event.returnValue='';}});
 function prepareNavigation(root){
  root.querySelectorAll('.topbar').forEach(header=>{

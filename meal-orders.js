@@ -4,7 +4,7 @@ const mealStatus={pending:'بانتظار قبول المطبخ',accepted:'تم 
 const mealDate=v=>new Intl.DateTimeFormat('ar-MA',{timeZone:'Africa/Casablanca',dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
 const peopleLabel=n=>Number(n)===1?'شخصًا واحدًا':Number(n)===2?'شخصين':`${n} ${Number(n)<=10?'أشخاص':'شخصًا'}`;
 const mealMoney=v=>`${Number(v).toFixed(2)} درهم`;
-const mealEffectiveStatus=o=>o.status==='pending'&&new Date(o.order_until)<=new Date()?'expired':o.status;
+const mealEffectiveStatus=o=>!o.request_v2&&o.status==='pending'&&new Date(o.order_until)<=new Date()?'expired':o.status;
 function mealLocalToISO(value){
  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw Error('حدد اليوم والوقت الذي تريد فيه طلبك.');
  const target=Date.parse(value+'Z');let instant=target;
@@ -12,6 +12,7 @@ function mealLocalToISO(value){
  for(let i=0;i<3;i++){const p=Object.fromEntries(fmt.formatToParts(new Date(instant)).map(x=>[x.type,x.value]));const shown=Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:00Z`);if(shown===target)return new Date(instant).toISOString();instant+=target-shown;}
  throw Error('هذا التوقيت غير متاح بسبب تغيير الساعة. اختر موعدًا آخر.');
 }
+async function getKitchenOrders(token){const [old,requests]=await Promise.all([mealRpc('chef_meal_orders',{p_session_token:token}),mealRpc('food_requests_chef',{p_session_token:token})]);return [...requests,...old];}
 async function mealRpc(name,args){const{data,error}=await db.rpc(name,args);if(error)throw Error(mealError(error.message));return data;}
 function mealError(message){
  const known={'subscription_reference_once':'مرجع الأداء مسجل من قبل. راجع المرجع أو تواصل مع الإدارة.','payment instructions unavailable':'لم تتوفر تعليمات الأداء بعد.','subscription required':'يحتاج اشتراك المطبخ إلى تأكيد أو تجديد.','invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','invalid requested time':'اختر موعدًا مستقبلًا خلال الستين يومًا القادمة.','invalid portion':'حدد عدد الأشخاص الذين يكفيهم الطبق.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','kitchen settings required':'حدد طريقة الاستلام في بيانات مطبخك أولًا.','invalid work days':'اختر أيام العمل من الأزرار الظاهرة.'};
@@ -29,7 +30,7 @@ async function openMyMealOffers(){
  const rows=await mealRpc('chef_meal_offers',{p_session_token:chefSessionToken}),screen=mealPanel('myMealOffers','أطباق مطبخي'),box=screen.querySelector('.meal-content');
  screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='';
  box.append(mealAction('تحديث',openMyMealOffers));if(!rows.length)box.insertAdjacentHTML('beforeend','<p>أضف أول طبق لاستقبال الطلبات.</p>');
- rows.forEach(o=>{const card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)}</h2><p>طبق واحد يكفي ${peopleLabel(o.serves)} · ${mealMoney(o.price)}</p><p>${o.active?'متاح للطلب — يُحضّر حسب الطلب':'غير متاح مؤقتًا'}</p>`;card.append(mealAction('تعديل هذا الطبق',()=>openMealOfferForm(o)));card.append(mealAction(o.active?'إيقاف طلب هذا الطبق مؤقتًا':'إتاحة هذا الطبق مجددًا',async()=>{await mealRpc('meal_offer_availability',{p_session_token:chefSessionToken,p_offer_id:o.id,p_active:!o.active});await openMyMealOffers();}));box.append(card);});showScreen(screen.id);
+ rows.forEach(o=>{const card=document.createElement('article');card.className='meal-card';card.innerHTML=`<h2>${escapeHtml(o.dish_name)}</h2><p>${o.reference_price!=null?mealMoney(o.reference_price)+' — سعر مرجعي للشخص':'حدّد السعر المرجعي للشخص'}</p><p>${o.active?'متاح للطلب — يُحضّر حسب الطلب':'غير متاح مؤقتًا'}</p>`;card.append(mealAction('تعديل هذا الطبق',()=>openMealOfferForm(o)));card.append(mealAction(o.active?'إيقاف طلب هذا الطبق مؤقتًا':'إتاحة هذا الطبق مجددًا',async()=>{await mealRpc('meal_offer_availability',{p_session_token:chefSessionToken,p_offer_id:o.id,p_active:!o.active});await openMyMealOffers();}));box.append(card);});showScreen(screen.id);
 }
 let selectedMealOffer=null,mealOffers=[],mealRequest=null;
 async function openMealOrdering(chef){
@@ -98,7 +99,7 @@ function chefOrderCard(o,refresh){
 
 }
 async function openChefMealOrders(){
- const orders=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken}),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>اقبل الطلب فقط إذا استطعت تحضير العدد المطلوب في موعد الزبون. التنبيه يتحدث أثناء فتح التطبيق.</p>';orders.sort((a,b)=>Number(mealEffectiveStatus(b)==='pending')-Number(mealEffectiveStatus(a)==='pending'));box.append(mealAction('تحديث الطلبات',openChefMealOrders));
+ const orders=await getKitchenOrders(chefSessionToken),screen=mealPanel('chefMealOrders','طلبات مطبخي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=async()=>{const c=await restoreChefSession(false);if(c)openKitchenDashboard(c);};box.innerHTML='<p>تواصل مع الزبون للاتفاق، ثم سجّل ما اتفقتما عليه.</p>';orders.sort((a,b)=>Number(mealEffectiveStatus(b)==='pending')-Number(mealEffectiveStatus(a)==='pending'));box.append(mealAction('تحديث الطلبات',openChefMealOrders));
  if(!orders.length)box.insertAdjacentHTML('beforeend','<p>لا توجد طلبات بعد.</p>');
  orders.forEach(o=>box.append(chefOrderCard(o,openChefMealOrders)));showScreen(screen.id);
 }
@@ -113,13 +114,13 @@ document.getElementById('orderBack').onclick=()=>showScreen('chefs');
 // Only a fragment carries the private order capability; it is never sent in HTTP URLs.
 let mealTrackingToken=null,mealTrackingStatus=null,mealPollBusy=false,mealLastPending=null,mealLastSession=null;
 async function followOrderLink(){const m=location.hash.match(/^#order=([0-9a-f]{64})$/);if(!m)return;try{await openCustomerMealOrder(m[1]);const rows=readMealReceipts();if(!rows.some(r=>r.token===m[1])){rows.unshift({token:m[1],ref:'طلب محفوظ'});localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(rows.slice(0,100)));}history.replaceState(null,'',location.pathname+location.search);}catch(err){showToast(err.message);}}
-window.addEventListener('hashchange',followOrderLink);followOrderLink();
+window.addEventListener('hashchange',followOrderLink);window.addEventListener('DOMContentLoaded',followOrderLink,{once:true});
 setInterval(async()=>{
  if(document.visibilityState==='hidden'||mealPollBusy)return;mealPollBusy=true;
  try{
   if(chefSessionToken&&document.querySelector('#chefKitchenDashboard.active,#chefMealOrders.active')){
    if(mealLastSession!==chefSessionToken){mealLastPending=null;mealLastSession=chefSessionToken;}
-   const rows=await mealRpc('chef_meal_orders',{p_session_token:chefSessionToken});const ids=rows.filter(o=>mealEffectiveStatus(o)==='pending').map(o=>o.id);
+   const rows=await getKitchenOrders(chefSessionToken);const ids=rows.filter(o=>mealEffectiveStatus(o)==='pending').map(o=>o.id);
    let note=document.getElementById('mealNewOrderNotice');if(!note){note=document.createElement('button');note.id='mealNewOrderNotice';note.className='primary';note.setAttribute('aria-live','polite');note.onclick=()=>mealBusy(note,openChefMealOrders);}
    const host=document.querySelector('#chefKitchenDashboard.active .kitchen-builder,#chefMealOrders.active .meal-content');if(host){host.prepend(note);note.hidden=ids.length===0;note.textContent=`طلبات تنتظر قبولك: ${ids.length} — فتح الطلبات`;}
    if(ids.some(id=>!mealLastPending?.includes(id)))showToast(`لديك ${ids.length} طلب بانتظار القبول`);mealLastPending=ids;
