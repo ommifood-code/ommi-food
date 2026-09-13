@@ -40,12 +40,16 @@ function field(id,value){w.document.getElementById(id).value=value;}
 (async()=>{
  await tick();
  assert.equal(w.document.querySelectorAll('.gender.active').length,0,'no default gender');
+ w.openModal(w.document.getElementById('joinModal'));w.document.getElementById('joinModal').click();assert.ok(w.document.getElementById('joinModal').classList.contains('open'),'registration margin does not dismiss');w.document.querySelector('#joinModal [data-close]').click();
+ w.openChefLogin();w.document.getElementById('chefLoginModal').click();assert.ok(w.document.getElementById('chefLoginModal').classList.contains('open'),'login margin does not dismiss');w.document.querySelector('#chefLoginModal .close').click();
  field('joinName','كريم');await w.document.getElementById('submitJoinBtn').onclick();
  assert.ok(!calls.some(c=>c[0]==='chef_register'),'missing gender does not submit');
  assert.match(w.document.getElementById('toast').textContent,/اختر الجنس/);
  w.openKitchenDashboard(chef);
  assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard');
  assert.equal(w.document.querySelectorAll('#mealActions button').length,3);
+ for(const el of [w.document.body,w.document.querySelector('main'),w.document.getElementById('chefKitchenDashboard'),w.document.querySelector('#chefKitchenDashboard .content'),w.document.querySelector('#chefKitchenDashboard .topbar'),w.document.querySelector('#chefKitchenDashboard .mini-logo')]){el.click();assert.equal(w.document.querySelector('.screen.active').id,'chefKitchenDashboard','blank areas and logo do not navigate');}
+ w.document.getElementById('myKitchenHome').click();assert.equal(w.document.querySelector('.screen.active').id,'home','explicit back arrow works');w.openKitchenDashboard(chef);
  w.document.querySelector('#mealActions button').click();await tick();
  assert.equal(w.document.querySelector('.screen.active').id,'mealOfferEditor','dashboard add meal button opens editor');
  const savedDishes=chef.dishes;chef.dishes=[];await w.openMealOfferForm(chef);assert.ok(w.document.querySelector('[name=dish_name]'),'first meal without saved dish');chef.dishes=savedDishes;
