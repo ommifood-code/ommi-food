@@ -121,7 +121,7 @@ begin
  if not public.is_admin() then raise exception 'unauthorized';end if;
  update public.orders set admin_contacted_at=now() where id=p_order_id and status='pending';
 end $$;
-revoke all on function public.meal_offer_availability(text,uuid,boolean),public.admin_contacted_meal_order(uuid) from public;
+revoke all on function public.meal_offer_availability(text,uuid,boolean),public.admin_contacted_meal_order(uuid) from public,anon,authenticated;
 grant execute on function public.meal_offer_availability(text,uuid,boolean) to anon,authenticated;
 grant execute on function public.admin_contacted_meal_order(uuid) to authenticated;
 -- Reuse the cook's own pickup/delivery settings when adding another dish.
