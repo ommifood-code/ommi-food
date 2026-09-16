@@ -32,7 +32,7 @@ openMealOrdering=async function(chef){
  });};
 };
 openCustomerMealOrder=async function(token){
- const o=await mealRpc('food_request_customer',{p_token:token});if(!o){requestTrackingToken=null;return oldCustomerTracking(token);}requestTrackingToken=token;mealTrackingToken=null;rememberMealReceipt(token,o.dish_name);
+ const o=await mealRpc('food_request_customer',{p_token:token});if(!o){requestTrackingToken=null;try{localStorage.removeItem('ommi_last_order_token')}catch{}return oldCustomerTracking(token);}requestTrackingToken=token;mealTrackingToken=null;try{localStorage.setItem('ommi_last_order_token',token)}catch{}rememberMealReceipt(token,o.dish_name);
  const screen=mealPanel('customerMealTracking','متابعة طلبي'),box=screen.querySelector('.meal-content');box.innerHTML=`<article class="meal-card"><strong>${escapeHtml(requestStatus(o))}</strong>${requestSummary(o)}<details class="request-reference"><summary>رقم الطلب</summary><p dir="ltr" style="overflow-wrap:anywhere">${escapeHtml(o.order_ref)}</p></details>${o.reason?`<p>${escapeHtml(o.reason)}</p>`:''}</article><p>الدفع والتواصل مباشرة مع المطبخ.</p>`;
  const action=async(name,data={})=>{await mealRpc('food_request_customer_action',{p_token:token,p_action:name,p_data:data});await openCustomerMealOrder(token);};
  const card=box.querySelector('article');const missed=['pending','discussing','proposed'].includes(o.status)&&o.requested_at&&Date.parse(o.requested_at)<Date.now();
@@ -66,6 +66,23 @@ chefOrderCard=function(o,refresh){if(!o.request_v2)return oldChefCard(o,refresh)
 };
 // A reminder is shown in the existing private request; no paid messages or automatic phone contact.
 const requestOriginalTracking=openCustomerMealOrder;openCustomerMealOrder=async function(token){await requestOriginalTracking(token);if(requestTrackingToken===token){const o=await mealRpc('food_request_customer',{p_token:token});if(o?.last_reminder_at&&!o.received_at)document.querySelector('#customerMealTracking .meal-content').insertAdjacentHTML('afterbegin','<p class="pending-summary">المطبخ يذكّرك بتأكيد الاستلام إذا وصلك الطعام.</p>');}};
-const requestOriginalReceipts=openMyMealReceipts;openMyMealReceipts=function(){requestOriginalReceipts();const box=document.querySelector('#myMealReceipts .meal-content');box.insertAdjacentHTML('afterbegin','<p>استلمت طعامك؟ افتح طلبك وأكّد الاستلام. التقييم اختياري.</p>');};document.getElementById('myOrdersBtn').onclick=openMyMealReceipts;document.getElementById('homeMyOrdersBtn').onclick=openMyMealReceipts;
+const MEAL_LAST_ORDER_KEY='ommi_last_order_token';
+function refreshHomeOrderShortcut(){
+ const rows=readMealReceipts(),button=document.getElementById('homeMyOrdersBtn');
+ let hint=document.getElementById('homeOrderHint');
+ if(!hint&&button){hint=document.createElement('p');hint.id='homeOrderHint';hint.className='home-order-hint';button.insertAdjacentElement('afterend',hint);}
+ if(button){button.textContent=rows.length?'متابعة طلباتي':'طلباتي ومتابعتها';button.setAttribute('aria-label',rows.length?'فتح الطلبات المحفوظة':'فتح طلباتي');}
+ if(hint){hint.hidden=!rows.length;hint.textContent=rows.length===1?'لديك طلب محفوظ في هذا المتصفح.':'لديك طلبات محفوظة في هذا المتصفح.';}
+}
+const requestOriginalReceipts=openMyMealReceipts;openMyMealReceipts=function(){requestOriginalReceipts();const box=document.querySelector('#myMealReceipts .meal-content');box.insertAdjacentHTML('afterbegin','<p>استلمت طعامك؟ افتح طلبك وأكّد الاستلام. التقييم اختياري.</p>');refreshHomeOrderShortcut();};
+const requestBaseShowScreen=showScreen;showScreen=function(id){if(id==='home'){try{localStorage.removeItem(MEAL_LAST_ORDER_KEY)}catch{}requestTrackingToken=null;}return requestBaseShowScreen(id);};
+document.getElementById('myOrdersBtn').onclick=openMyMealReceipts;document.getElementById('homeMyOrdersBtn').onclick=openMyMealReceipts;refreshHomeOrderShortcut();
+async function restoreRecentOrder(){
+ if(location.hash)return;
+ let token='';try{token=localStorage.getItem(MEAL_LAST_ORDER_KEY)||''}catch{}
+ if(!/^[0-9a-f]{64}$/.test(token))return;
+ try{await openCustomerMealOrder(token)}catch{try{localStorage.removeItem(MEAL_LAST_ORDER_KEY)}catch{}refreshHomeOrderShortcut();}
+}
+window.addEventListener('DOMContentLoaded',restoreRecentOrder,{once:true});
 let requestPollBusy=false,requestSeen='';
 setInterval(async()=>{if(requestPollBusy||document.visibilityState==='hidden'||!requestTrackingToken||!document.querySelector('#customerMealTracking.active'))return;requestPollBusy=true;try{const token=requestTrackingToken,o=await mealRpc('food_request_customer',{p_token:token});if(!o||token!==requestTrackingToken)return;const signature=JSON.stringify([o.status,o.agreement_version,o.received_at,o.last_reminder_at,o.rating]);if(requestSeen&&requestSeen!==signature){let note=document.getElementById('requestUpdateNotice');if(!note){note=mealAction('وصل تحديث لطلبك — عرضه',()=>openCustomerMealOrder(token));note.id='requestUpdateNotice';document.querySelector('#customerMealTracking .meal-content').prepend(note);}}requestSeen=signature;}catch{}finally{requestPollBusy=false;}},20000);

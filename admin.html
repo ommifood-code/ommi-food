@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>إدارة Ommi Food</title>
-  <link rel="stylesheet" href="style.css?v=20260905-1" />
+  <link rel="stylesheet" href="style.css?v=20260916-admin" />
   <link rel="stylesheet" href="dish-images.css?v=20260905-1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
-<link rel="stylesheet" href="meal-orders.css?v=20260907-1"><link rel="stylesheet" href="simple-launch.css?v=20260913-audit"></head>
+<link rel="stylesheet" href="meal-orders.css?v=20260907-1"><link rel="stylesheet" href="simple-launch.css?v=20260916-admin"></head>
 <body class="admin-page">
   <main class="admin-shell">
     <section id="adminLogin" class="admin-login-card">
@@ -22,13 +22,15 @@
     </section>
     <section id="adminDashboard" class="admin-dashboard" hidden>
       <header class="admin-header"><div><strong>إدارة Ommi Food</strong><span id="adminIdentity"></span></div><button id="adminLogoutBtn" class="admin-secondary">تسجيل الخروج</button></header>
-      <div class="admin-summary"><div><strong id="urgentCount">0</strong><span>تحتاج تدخلك الآن</span></div><div><strong id="complaintCount">0</strong><span>شكاوى مفتوحة</span></div><div><strong id="pendingCount">0</strong><span>ملفات تحتاج متابعة</span></div><div><strong id="activeCount">0</strong><span>مطابخ منشورة</span></div></div>
-      <nav class="admin-tabs" aria-label="أقسام الإدارة"><button class="admin-tab active" data-admin-view="all">لوحة القيادة</button><button class="admin-tab" data-admin-view="urgent">تحتاج تدخلي</button><button class="admin-tab" data-admin-view="complaints">الشكاوى</button><button class="admin-tab" data-admin-view="kitchens">المطابخ والطاهيات</button><button class="admin-tab" data-admin-view="stats">الإحصاءات</button></nav>
-      <section id="adminOrdersSection" class="admin-panel"><div class="admin-section-head"><h2>الطلبات والبلاغات</h2><button id="adminOrdersRefresh" class="admin-secondary">تحديث</button></div><p id="adminOrdersSummary"></p><div id="adminOrdersList"></div></section>
+      <div class="admin-summary"><button type="button" class="admin-summary-card" data-admin-view="urgent" aria-label="عرض ما يحتاج تدخلك"><strong id="urgentCount">0</strong><span>تحتاج تدخلك الآن</span></button><button type="button" class="admin-summary-card" data-admin-view="complaints" aria-label="عرض الشكاوى المفتوحة"><strong id="complaintCount">0</strong><span>شكاوى مفتوحة</span></button><button type="button" class="admin-summary-card" data-admin-view="kitchens" aria-label="عرض ملفات المطابخ"><strong id="pendingCount">0</strong><span>ملفات تحتاج متابعة</span></button><button type="button" class="admin-summary-card" data-admin-view="kitchens" aria-label="عرض المطابخ المنشورة"><strong id="activeCount">0</strong><span>مطابخ منشورة</span></button></div>
+      <nav class="admin-tabs" aria-label="أقسام الإدارة"><button type="button" class="admin-tab active" data-admin-view="all">لوحة القيادة</button><button type="button" class="admin-tab" data-admin-view="urgent">تحتاج تدخلي</button><button type="button" class="admin-tab" data-admin-view="complaints">الشكاوى</button><button type="button" class="admin-tab" data-admin-view="kitchens">المطابخ والطاهيات</button><button type="button" class="admin-tab" data-admin-view="stats">الإحصاءات</button></nav>
+      <section id="adminRequestsSection" class="admin-panel"><div class="admin-section-head"><div><h2>طلبات الزبائن</h2><p class="admin-panel-note">الأولوية للطلبات التي تحتاج اتصالًا والبلاغات المفتوحة.</p></div><button id="adminRequestsRefresh" class="admin-secondary">تحديث</button></div><div id="requestAdmin" class="admin-request-content"></div></section>
+      <section id="adminStatsSection" class="admin-panel" hidden><div class="admin-section-head"><div><h2>الإحصاءات</h2><p class="admin-panel-note">أرقام تساعدك على معرفة ما يحدث داخل المنصة.</p></div><button id="adminStatsRefresh" class="admin-secondary">تحديث</button></div><div id="adminStatsGrid" class="admin-stats-grid"></div><p id="adminStatsNote" class="admin-panel-note"></p></section>
+      <section id="adminOrdersSection" class="admin-panel"><div class="admin-section-head"><div><h2>سجل الطلبات</h2><p class="admin-panel-note">الطلبات المسجلة في مسار الأطباق المحددة.</p></div><button id="adminOrdersRefresh" class="admin-secondary">تحديث</button></div><p id="adminOrdersSummary"></p><div id="adminOrdersList"></div></section>
       <section id="adminChefSection" class="admin-panel"><div class="admin-section-head"><h2>المطابخ والطاهيات</h2><button id="adminRefreshBtn" class="admin-secondary">تحديث</button></div><div id="adminChefList" class="admin-chef-list"></div></section>
     </section>
   </main>
   <div id="toast" class="toast"></div>
-  <script src="admin.js?v=20260914-receipt"></script>
-<script src="admin-orders.js?v=20260914-receipt"></script><script src="food-request-admin.js?v=20260914-receipt"></script></body>
+  <script src="admin.js?v=20260916-cockpit"></script>
+<script src="admin-orders.js?v=20260916-cockpit"></script><script src="food-request-admin.js?v=20260916-cockpit"></script></body>
 </html>
