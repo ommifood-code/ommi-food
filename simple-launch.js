@@ -2,8 +2,6 @@
 'use strict';
 document.getElementById('showDiscoveryBtn').onclick=async()=>{showScreen('chefs');await loadChefs();};
 document.querySelector('#home .home-form').prepend(document.querySelector('#home .home-paths'));
-document.querySelector('#home .chef-invite strong').textContent='حوّلي مهارتك في الطبخ إلى عمل من بيتك.';
-document.querySelector('#home .chef-invite p').textContent='اعرضي أطباقك، واطبخي لجيرانك حسب طلبهم.';
 document.getElementById('chefLoginBtn')?.remove();
 const genderMale=g=>['m','male','ذكر'].includes(String(g||'').toLowerCase());
 prefix=g=>genderMale(g)?'عمّي':'أمّي';
