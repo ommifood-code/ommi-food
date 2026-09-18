@@ -1,0 +1,3 @@
+-- Simplified launch flow: direct phone/WhatsApp agreement; no second customer approval.
+-- Also blocks accepting a request whose requested time has already passed.
+-- Runtime function applied in Supabase on 2026-09-18.
