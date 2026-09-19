@@ -1,26 +1,24 @@
-# Scheduled meal verification
+# Current release verification
 
-`preorder_flow.sql` runs against the deployed schema as postgres, inside one transaction ending in ROLLBACK. It creates only transaction-local fixtures and checks server-side totals, idempotency, cross-chef denial, private customer capability, capacity, transitions, cancellation, delivery validation, feedback and expiry. Never split this script into separate SQL requests.
+Use the latest feature branch and `PRODUCT_DECISIONS.md` for product behavior. Historical `preorder_flow`, `cook-to-order`, and original negotiated `customer-led.sql` scenarios describe older flows, not the current launch gate.
 
-`meal-ui.cjs` runs the actual HTML and three application scripts in jsdom with an in-memory RPC double. It does not contact Supabase. Install jsdom 26.1.0 in a temporary test directory, then run:
+## Current checks
+
+- `direct-contact.sql`: run **the whole file in one SQL call** after the consistency migration. BEGIN/ROLLBACK fixtures verify request idempotency, acceptance, phone agreement actor, preparation, ready/delivered, distinct receipt, rating gates, cancellation, overdue refusal, rescheduling old requests, capability isolation and private tables. No fixtures persist.
+- `customer-led-ui.cjs`: actual application scripts in jsdom, with an in-memory RPC double. Checks dish entry, reference/custom requests, contact links, preparation/delivery/receipt/rating and saved receipts. It does not replace backend checks or a phone test.
+- `navigation-state.cjs`: fresh DOM after refresh; public/private screens, form drafts and edited dish ID, previous screen, inert blank space, approved homepage stability, session denial, receipts and PIN exclusion.
+- `request-admin.cjs`: current request follow-up and complaint controls, overdue/received classification, actor-specific agreement display.
 
 ```sh
-npm install --prefix /tmp/ommi-dom-check --no-audit --no-fund jsdom@26.1.0
-NODE_PATH=/tmp/ommi-dom-check/node_modules node tests/meal-ui.cjs
+npm install --prefix /tmp/ommi-tests --no-audit --no-fund jsdom@26.1.0
+NODE_PATH=/tmp/ommi-tests/node_modules node tests/customer-led-ui.cjs
+NODE_PATH=/tmp/ommi-tests/node_modules node tests/navigation-state.cjs
+NODE_PATH=/tmp/ommi-tests/node_modules node tests/request-admin.cjs
+python scripts/build-static.py
 ```
 
-The DOM test checks dashboard actions, scheduling, Morocco timezone conversion, conditional delivery fields, displayed totals, order submission, receipt persistence and kitchen-save navigation. It is not a visual browser or real customer E2E test.
+## Phone acceptance remains required
 
-## Deployment
+With an authorized test kitchen and customer, test request → accept → contact → agree/start preparation → ready → delivered → customer receipt → optional rating. Also test rejection, late request, reopening/refresh and admin complaint follow-up. No automatic messages are sent by these tests. Contact buttons open phone/WhatsApp; they do not initiate calls. Polling while visible is not background notification.
 
-Database migrations applied: `scheduled_meals_private_order_flow`, then `meal_offers_respect_public_chef_column_grants`. `db/preorder_flow.sql` contains the consolidated equivalent for a fresh baseline; do not re-run it on the already migrated production database.
-
-Frontend requires these migrations. Existing registration and kitchen-save RPC signatures are unchanged. Old direct `orders` access is revoked: no public customer data or arbitrary order insertion. Frontend and database pricing come from the offer snapshot, not the customer.
-
-## Acceptance before public launch
-
-Use one authorized test kitchen and customer: schedule a meal, place request, accept, prepare, mark ready, deliver, confirm receipt and submit/resolve a complaint. Test on mobile. No SMS, payment service, subscription, driver dispatch or automatic notifications are enabled. Both parties refresh their order lists manually. Phone-based request throttling is basic and is not IP/device abuse protection. Pending requests do not reserve capacity; only acceptance does. Chef publication verification remains mandatory.
-
-Current cook-to-order model: run cook-to-order.sql and meal-ui.cjs. Previous SQL fixtures have been adapted to customer-chosen times; stock assertions are removed. No live fixtures persist.
-
-Final consistency review: kitchen-settings.sql checks shared preferences, public workdays and immutable order details; admin-followup.cjs checks the manual call workflow. meal-ui.cjs also verifies all seven days, exact serving count above ten, repeated dish creation and direct editing.
+Static build and preview success are distinct from deployment to the user's Cloudflare URL. Record the tested commit and destination; never infer publication from a GitHub commit alone.

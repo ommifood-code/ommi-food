@@ -17,10 +17,11 @@ function requestAdminElapsed(value){
  return days?`${days} يوم و${hours%24} ساعة`:`${hours} ساعة`;
 }
 function requestAdminOverdue(o){
- return ['pending','discussing','proposed'].includes(o.status)&&Number.isFinite(Date.parse(o.requested_at))&&Date.parse(o.requested_at)<Date.now();
+ return !o.received_at&&['pending','discussing','proposed','accepted','preparing','ready'].includes(o.status)&&Number.isFinite(Date.parse(o.agreed_at||o.requested_at))&&Date.parse(o.agreed_at||o.requested_at)<Date.now();
 }
 function requestAdminStatus(o){
- const labels={pending:'بانتظار رد المطبخ',discussing:'جارٍ الاتفاق',proposed:'ينتظر موافقة الزبون',accepted:'تم الاتفاق',preparing:'قيد التحضير',ready:'جاهز',delivered:'المطبخ أعلن التسليم',rejected:'لم يتم الاتفاق',cancelled:'ملغى'};
+ if(o.received_at)return 'الاستلام مؤكد من الزبون';
+ const labels={pending:'بانتظار رد المطبخ',discussing:'قبله المطبخ — بانتظار الاتفاق',proposed:'تفاصيل سابقة — تحتاج متابعة',accepted:'تم الاتفاق',preparing:'قيد التحضير',ready:'جاهز',delivered:'المطبخ أعلن التسليم',rejected:'لم يتم الاتفاق',cancelled:'ملغى'};
  return requestAdminOverdue(o)?'فات الموعد المطلوب':labels[o.status]||o.status||'غير محدد';
 }
 function requestAdminStats(m){
@@ -37,7 +38,7 @@ function requestAdminStats(m){
  const grid=document.getElementById('adminStatsGrid');
  if(grid)grid.innerHTML=stats.map(([label,value])=>`<div class="admin-stat"><strong>${e(value)}</strong><span>${e(label)}</span></div>`).join('');
  const note=document.getElementById('adminStatsNote');
- if(note)note.textContent='القيمة المعروضة تقدير للاتفاقات داخل المنصة، وليست إثباتًا للدفع أو دخلًا للمنصة.';
+ if(note)note.textContent='القيمة تشمل الأسعار المسجّلة والمؤكدة داخل التطبيق فقط. أثمان الاتفاقات الهاتفية غير المسجّلة غير محسوبة؛ ليست هذه مداخيل المنصة.';
 }
 
 async function loadRequestAdmin(){
@@ -71,14 +72,14 @@ async function loadRequestAdmin(){
   const dish=e(o.dish_name||'طبق غير مسمى');
   const ref=e(o.order_ref||'—');
   const currentStatus=requestAdminStatus(o);
-  const agreement=o.agreement_version?`<div class="admin-agreement"><strong>${o.customer_agreed_at?'الاتفاق الذي وافق عليه الزبون':'تفاصيل مقترحة لم يؤكدها الزبون بعد'}</strong><p>${e(o.agreed_dish||o.dish_name)} · ${e(o.agreed_people||'—')} أشخاص · ${adminMoney(o.agreed_total)} · ${requestAdminTime(o.agreed_at)}</p><p>${e(o.agreed_fulfilment||'')}</p></div>`:'';
+  const agreement=o.chef_agreed_at?`<div class="admin-agreement"><strong>المطبخ سجّل الاتفاق بعد التواصل</strong><p>الموعد: ${requestAdminTime(o.agreed_at)}</p></div>`:o.agreement_version?`<div class="admin-agreement"><strong>${o.customer_agreed_at?'الاتفاق الذي وافق عليه الزبون':'تفاصيل سابقة مقترحة'}</strong><p>${e(o.agreed_dish||o.dish_name)} · ${e(o.agreed_people||'—')} أشخاص · ${adminMoney(o.agreed_total)} · ${requestAdminTime(o.agreed_at)}</p><p>${e(o.agreed_fulfilment||'')}</p></div>`:'';
   card.innerHTML=`<div class="admin-request-heading"><h3>${dish} <small>— ${ref}</small></h3><strong class="admin-status ${urgent(o)?'late':''}">${e(currentStatus)}</strong></div><p>المطلوب: ${e(o.people??'—')} أشخاص · الموعد: ${requestAdminTime(o.requested_at)}</p><p>التقدير: ${adminMoney(o.estimate)}${o.offer_id?'':' · طبق طلبه الزبون خارج القائمة'}</p><p>الزبون: ${e(o.customer_name||'—')} — <a href="tel:${e(o.customer_phone||'')}">${e(o.customer_phone||'غير متوفر')}</a></p><p>المطبخ: ${e(o.chef_phone||'غير متوفر')}</p>${overdue(o)?'<div class="admin-warning"><strong>تأخر الطلب.</strong> اتصل بالمطبخ والزبون لتثبيت موعد جديد أو إنهاء الطلب.</div>':''}${agreement}<p>إعلان التسليم: ${o.chef_delivered_at?requestAdminTime(o.chef_delivered_at):'لم يسجّل'} · تأكيد الزبون: ${o.received_at?requestAdminTime(o.received_at):'غير معروف'}</p><p>التقييم: ${o.rating??'لم يقيّم'}${o.feedback?` — ${e(o.feedback)}`:''}</p>${o.reason?`<p>سبب الاعتذار أو الإلغاء: ${e(o.reason)}</p>`:''}${o.notes?`<p>رغبة الزبون: ${e(o.notes)}</p>`:''}${o.complaint?`<div class="admin-complaint"><strong>بلاغ ${o.complaint_resolved_at?'مراجع':'مفتوح'}:</strong> ${e(o.complaint)}</div>`:''}`;
   const action=(label,name)=>{
    const b=document.createElement('button');b.type='button';b.textContent=label;b.className='admin-secondary';
    b.onclick=async()=>{b.disabled=true;try{const r=await db.rpc('food_request_admin',{p_id:o.id,p_action:name});if(r.error)throw r.error;await loadRequestAdmin();}catch{toastMsg('تعذر حفظ المتابعة.');}finally{b.disabled=false;}};
    card.append(b);
   };
-  if(['pending','discussing','proposed'].includes(o.status)){
+  if(!o.received_at&&['pending','discussing','proposed','accepted','preparing','ready'].includes(o.status)){
    card.insertAdjacentHTML('beforeend',`<p><strong>ينتظر منذ ${requestAdminElapsed(o.created_at)}</strong>${o.admin_contacted_at?` · آخر متابعة: ${requestAdminTime(o.admin_contacted_at)}`:''}</p>`);
    action('سجّل أنني تابعت الطلب','contacted');
   }

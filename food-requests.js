@@ -1,10 +1,10 @@
 'use strict';
 Object.assign(mealStatus,{pending:'بانتظار رد المطبخ',discussing:'تم قبول الطلب — تواصلوا للاتفاق',accepted:'تم الاتفاق',expired:'فات موعد الطلب',delivered:'المطبخ أعلن التسليم'});
-const requestStatus=o=>o.received_at?'الاستلام مؤكد من الزبون':mealStatus[o.status]||o.status;
+const requestStatus=o=>o.received_at?'الاستلام مؤكد من الزبون':mealStatus[mealEffectiveStatus(o)]||o.status;
 const oldCustomerTracking=openCustomerMealOrder,oldChefCard=chefOrderCard;
 let requestDraft=null,requestViewVersion=0,requestTrackingToken=null;
 const referenceLabel=o=>o.reference_price!=null?`${mealMoney(o.reference_price)} للشخص — سعر مرجعي`:'الثمن بعد الاتفاق مع المطبخ';
-function requestSummary(o){return `<h2>${escapeHtml(o.dish_name)}</h2><p>${peopleLabel(o.people)} · الموعد المطلوب: ${mealDate(o.requested_at)}</p><p>${o.estimate!=null?'تقدير الطعام: '+mealMoney(o.estimate)+' — ليس ثمنًا نهائيًا، والتوصيل حسب الاتفاق':'الثمن بعد الاتفاق مع المطبخ'}</p>${o.notes?`<p>رغبة الزبون: ${escapeHtml(o.notes)}</p>`:''}`;}
+function requestSummary(o){return `<h2>${escapeHtml(o.dish_name)}</h2><p>${peopleLabel(o.people)} · الموعد المطلوب: ${mealDate(o.requested_at)}</p>${o.chef_agreed_at&&o.agreed_at&&Date.parse(o.agreed_at)!==Date.parse(o.requested_at)?`<p>الموعد الجديد الذي سجّله المطبخ بعد التواصل: ${mealDate(o.agreed_at)}</p>`:''}<p>${o.estimate!=null?'تقدير الطعام: '+mealMoney(o.estimate)+' — ليس ثمنًا نهائيًا، والتوصيل حسب الاتفاق':'الثمن بعد الاتفاق مع المطبخ'}</p>${o.notes?`<p>رغبة الزبون: ${escapeHtml(o.notes)}</p>`:''}`;}
 function requestPhone(phone,label,text){const a=document.createElement('a');a.className='admin-secondary';a.textContent=label;a.href=text?'https://wa.me/'+phone.replace(/^0/,'212')+'?text='+encodeURIComponent(text):'tel:'+phone;if(text){a.target='_blank';a.rel='noopener noreferrer';}return a;}
 openMealOrdering=async function(chef){
  const version=++requestViewVersion;activeChef=chef;selectedMealOffer=null;mealRequest=null;
@@ -42,7 +42,7 @@ openCustomerMealOrder=async function(token){
  if(o.chef_phone){box.insertAdjacentHTML('beforeend',`<p><strong>رقم المطبخ:</strong> <span dir="ltr">${escapeHtml(o.chef_phone)}</span></p><p>${o.status==='pending'?'يمكنك الانتظار أو التواصل مع المطبخ مباشرة.':'تواصل مع المطبخ لتأكيد التفاصيل.'}</p>`);box.append(requestPhone(o.chef_phone,'اتصال'),requestPhone(o.chef_phone,'واتساب',`مرحبًا، بخصوص طلبي ${o.order_ref}: ${o.dish_name} لـ ${peopleLabel(o.people)}.`));}
  box.append(mealAction('التحقق من رد المطبخ',async()=>{await openCustomerMealOrder(token);showToast('تم جلب آخر حالة للطلب.');}));
  
- if(['pending','discussing'].includes(o.status))box.append(mealAction('إلغاء طلبي',()=>action('cancel')));
+ if(['pending','discussing','proposed'].includes(o.status))box.append(mealAction('إلغاء طلبي',()=>action('cancel')));
  if(['accepted','preparing','ready','delivered'].includes(o.status)&&!o.received_at){box.insertAdjacentHTML('beforeend','<h2>هل استلمت طلبك؟</h2>');box.append(mealAction('نعم، استلمت',()=>action('received')));}
  if(o.received_at&&!o.rating){const form=document.createElement('form');form.className='meal-form';form.innerHTML='<h2>كيف كانت تجربتك؟</h2><p>التقييم اختياري. رأيك الصادق يساعد الآخرين.</p><div class="request-stars" role="group" aria-label="التقييم من خمس نجوم">'+[1,2,3,4,5].map(n=>`<label><input type="radio" name="rating" value="${n}" required><span>${n} ★</span></label>`).join('')+'</div><label>تعليق اختياري<textarea name="feedback" class="field" maxlength="2000"></textarea></label><button class="primary">حفظ التقييم</button>';form.onsubmit=e=>{e.preventDefault();if(form.reportValidity())mealBusy(form.querySelector('button'),async()=>{await mealRpc('food_request_customer_action',{p_token:token,p_action:'rate',p_data:{rating:Number(new FormData(form).get('rating')),feedback:form.elements.feedback.value}});markFormSaved(form);await openCustomerMealOrder(token);});};box.append(form,mealAction('ليس الآن',()=>{form.hidden=true;}));}
  if(o.rating)box.insertAdjacentHTML('beforeend',`<p>تقييمك: ${o.rating} / 5${o.feedback?' — '+escapeHtml(o.feedback):''}</p>`);
@@ -51,12 +51,20 @@ openCustomerMealOrder=async function(token){
  showScreen(screen.id);history.replaceState(null,'',location.pathname+location.search+'#order='+token);
 };
 chefOrderCard=function(o,refresh){if(!o.request_v2)return oldChefCard(o,refresh);const card=document.createElement('article');card.className='meal-card';card.innerHTML=`<strong>${escapeHtml(requestStatus(o))}</strong>${requestSummary(o)}<p>${escapeHtml(o.customer_name)} · ${escapeHtml(o.order_ref)}</p><p><strong>رقم الزبون:</strong> <span dir="ltr">${escapeHtml(o.customer_phone)}</span></p>`;card.append(requestPhone(o.customer_phone,'اتصال'),requestPhone(o.customer_phone,'واتساب',`مرحبًا، أنا من المطبخ بخصوص طلبك ${o.order_ref}: ${o.dish_name}.`));
+ if(o.received_at){if(o.rating)card.insertAdjacentHTML('beforeend',`<p>تقييم الزبون: ${o.rating} / 5</p>`);return card;}
  const action=async(name,data={})=>{await mealRpc('food_request_chef_action',{p_session_token:chefSessionToken,p_id:o.id,p_action:name,p_data:data});await refresh();};
  const late=o.status==='pending'&&o.requested_at&&Date.parse(o.requested_at)<=Date.now();
  if(late)card.insertAdjacentHTML('beforeend','<div class="admin-warning"><strong>فات موعد هذا الطلب.</strong> لا يمكن قبوله الآن.</div>');
  if(o.status==='pending'&&!late)card.append(mealAction('قبول الطلب',()=>action('discussing')));
- if(o.status==='discussing'){card.insertAdjacentHTML('beforeend','<p>تواصل مع الزبون هاتفيًا أو عبر واتساب، وبعد اتفاقكما أكّد ذلك هنا.</p>');card.append(mealAction('تم الاتفاق — ابدأ التحضير',()=>action('agreed')));}
- const rejection=o.status==='pending'?'rejected':['discussing','accepted','preparing','ready'].includes(o.status)?'cancelled':null;
+ if(['discussing','proposed'].includes(o.status)){
+  card.insertAdjacentHTML('beforeend','<p>تواصل مع الزبون هاتفيًا أو عبر واتساب، وبعد اتفاقكما أكّد ذلك هنا.</p>');
+  if(Date.parse(o.agreed_at||o.requested_at)<=Date.now()){
+   const f=document.createElement('form');f.className='meal-form';
+   f.innerHTML='<label>الموعد الجديد المتفق عليه<input class="field" name="at" type="datetime-local" required></label><small>بتوقيت المغرب. حدده بعد التواصل مع الزبون.</small><button class="admin-secondary">تم الاتفاق — ابدأ التحضير</button>';
+   f.onsubmit=e=>{e.preventDefault();if(f.reportValidity())mealBusy(f.querySelector('button'),async()=>{await action('agreed',{at:mealLocalToISO(f.elements.at.value)});markFormSaved(f);});};card.append(f);
+  }else card.append(mealAction('تم الاتفاق — ابدأ التحضير',()=>action('agreed')));
+ }
+ const rejection=o.status==='pending'?'rejected':['discussing','proposed','accepted','preparing','ready'].includes(o.status)?'cancelled':null;
  if(rejection)card.append(mealAction(rejection==='rejected'?'أعتذر عن الطلب':'إلغاء بعد التواصل',()=>{if(card.querySelector('.reason-form'))return;const f=document.createElement('form');f.className='meal-form reason-form';f.innerHTML='<label>السبب<input class="field" name="reason" required minlength="3" maxlength="500"></label><button class="admin-secondary">تأكيد</button>';f.onsubmit=e=>{e.preventDefault();if(f.reportValidity())mealBusy(f.querySelector('button'),()=>action(rejection,{reason:f.elements.reason.value}));};card.append(f);markFormSaved(f);}));
  if(o.status==='accepted')card.append(mealAction('بدأت التحضير',()=>action('preparing')));
  if(['accepted','preparing'].includes(o.status))card.append(mealAction('الطعام جاهز',()=>action('ready')));
@@ -68,11 +76,9 @@ chefOrderCard=function(o,refresh){if(!o.request_v2)return oldChefCard(o,refresh)
 const requestOriginalTracking=openCustomerMealOrder;openCustomerMealOrder=async function(token){await requestOriginalTracking(token);if(requestTrackingToken===token){const o=await mealRpc('food_request_customer',{p_token:token});if(o?.last_reminder_at&&!o.received_at)document.querySelector('#customerMealTracking .meal-content').insertAdjacentHTML('afterbegin','<p class="pending-summary">المطبخ يذكّرك بتأكيد الاستلام إذا وصلك الطعام.</p>');}};
 const MEAL_LAST_ORDER_KEY='ommi_last_order_token';
 function refreshHomeOrderShortcut(){
- const rows=readMealReceipts(),button=document.getElementById('homeMyOrdersBtn');
- let hint=document.getElementById('homeOrderHint');
- if(!hint&&button){hint=document.createElement('p');hint.id='homeOrderHint';hint.className='home-order-hint';button.insertAdjacentElement('afterend',hint);}
- if(button){button.textContent=rows.length?'متابعة طلباتي':'طلباتي ومتابعتها';button.setAttribute('aria-label',rows.length?'فتح الطلبات المحفوظة':'فتح طلباتي');}
- if(hint){hint.hidden=!rows.length;hint.textContent=rows.length===1?'لديك طلب محفوظ في هذا المتصفح.':'لديك طلبات محفوظة في هذا المتصفح.';}
+ document.getElementById('homeOrderHint')?.remove();
+ const button=document.getElementById('homeMyOrdersBtn');
+ if(button){button.textContent='متابعة طلباتي';button.setAttribute('aria-label','متابعة طلباتي');}
 }
 const requestOriginalReceipts=openMyMealReceipts;openMyMealReceipts=function(){requestOriginalReceipts();const box=document.querySelector('#myMealReceipts .meal-content');box.insertAdjacentHTML('afterbegin','<p>استلمت طعامك؟ افتح طلبك وأكّد الاستلام. التقييم اختياري.</p>');refreshHomeOrderShortcut();};
 const requestBaseShowScreen=showScreen;showScreen=function(id){if(id==='home'){try{localStorage.removeItem(MEAL_LAST_ORDER_KEY)}catch{}requestTrackingToken=null;}return requestBaseShowScreen(id);};
@@ -81,7 +87,7 @@ async function restoreRecentOrder(){
  if(location.hash)return;
  let token='';try{token=localStorage.getItem(MEAL_LAST_ORDER_KEY)||''}catch{}
  if(!/^[0-9a-f]{64}$/.test(token))return;
- try{await openCustomerMealOrder(token)}catch{try{localStorage.removeItem(MEAL_LAST_ORDER_KEY)}catch{}refreshHomeOrderShortcut();}
+ try{await openCustomerMealOrder(token)}catch{showToast('تعذر تحميل الطلب. يمكنك فتحه من «متابعة طلباتي».');refreshHomeOrderShortcut();}
 }
 window.addEventListener('DOMContentLoaded',restoreRecentOrder,{once:true});
 let requestPollBusy=false,requestSeen='';

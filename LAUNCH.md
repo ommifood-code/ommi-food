@@ -1,3 +1,5 @@
+> Historical launch notes. Current product decisions and release checks are in PRODUCT_DECISIONS.md and tests/README.md. Do not use the old stock/negotiation gates for the current release.
+
 # الإطلاق المبسط
 
 القرارات المعتمدة:

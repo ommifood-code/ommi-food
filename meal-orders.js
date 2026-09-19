@@ -4,7 +4,7 @@ const mealStatus={pending:'بانتظار قبول المطبخ',accepted:'تم 
 const mealDate=v=>new Intl.DateTimeFormat('ar-MA',{timeZone:'Africa/Casablanca',dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
 const peopleLabel=n=>Number(n)===1?'شخصًا واحدًا':Number(n)===2?'شخصين':`${n} ${Number(n)<=10?'أشخاص':'شخصًا'}`;
 const mealMoney=v=>{const cents=Math.round(Number(v)*100);if(!Number.isFinite(cents))return 'غير محدد';const whole=Math.trunc(cents/100),part=Math.abs(cents%100);return `${whole} ${Math.abs(whole)>=3&&Math.abs(whole)<=10?'دراهم':'درهمًا'}${part?` و${part} سنتيمًا`:''}`;};
-const mealEffectiveStatus=o=>!o.request_v2&&o.status==='pending'&&new Date(o.order_until)<=new Date()?'expired':o.status;
+const mealEffectiveStatus=o=>o.status==='pending'&&Date.parse(o.request_v2?o.requested_at:o.order_until)<=Date.now()?'expired':o.status;
 function mealLocalToISO(value){
  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw Error('حدد اليوم والوقت الذي تريد فيه طلبك.');
  const target=Date.parse(value+'Z');let instant=target;
@@ -15,6 +15,8 @@ function mealLocalToISO(value){
 async function getKitchenOrders(token){const [old,requests]=await Promise.all([mealRpc('chef_meal_orders',{p_session_token:token}),mealRpc('food_requests_chef',{p_session_token:token})]);return [...requests,...old];}
 async function mealRpc(name,args){const{data,error}=await db.rpc(name,args);if(error)throw Error(mealError(error.message));return data;}
 function mealError(message){
+ if(String(message).includes('request expired'))return 'فات موعد الطلب. تواصل مع الزبون قبل إنشاء طلب جديد.';
+ if(String(message).includes('new agreed time required'))return 'حدد الموعد الجديد الذي اتفقتما عليه قبل بدء التحضير.';
  const known={'subscription_reference_once':'مرجع الأداء مسجل من قبل. راجع المرجع أو تواصل مع الإدارة.','payment instructions unavailable':'لم تتوفر تعليمات الأداء بعد.','subscription required':'يحتاج اشتراك المطبخ إلى تأكيد أو تجديد.','invalid session':'انتهت الجلسة. ادخل إلى مطبخك مجددًا.','offer unavailable':'الوجبة غير متاحة الآن. حدّث القائمة.','invalid requested time':'اختر موعدًا مستقبلًا خلال الستين يومًا القادمة.','invalid portion':'حدد عدد الأشخاص الذين يكفيهم الطبق.','too many requests':'وصلت إلى حد الطلبات خلال الساعة. حاول لاحقًا.','invalid transition':'تغيرت حالة الطلب أو انتهت مهلة قبوله. حدّث القائمة.','order not found':'تعذر الوصول إلى الطلب. تحقق من رمز المتابعة.','invalid delivery address':'حدد حيًا مخدومًا وعنوانًا واضحًا.','kitchen settings required':'حدد طريقة الاستلام في بيانات مطبخك أولًا.','invalid work days':'اختر أيام العمل من الأزرار الظاهرة.'};
  return Object.entries(known).find(([key])=>String(message).includes(key))?.[1]||'تعذر إتمام العملية. راجع البيانات وحاول مجددًا.';
 }

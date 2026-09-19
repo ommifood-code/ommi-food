@@ -1,3 +1,4 @@
+-- Historical negotiated-flow test; current launch gate: direct-contact.sql.
 do $$
 declare r jsonb;c uuid;t text;dish uuid;req uuid;token text:=repeat('b',64);blocked boolean;ver integer;
 begin

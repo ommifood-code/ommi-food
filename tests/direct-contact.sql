@@ -1,0 +1,65 @@
+-- Send this whole file in one call. All fixtures roll back, including on error.
+begin;
+do $$
+declare r jsonb; c uuid; t text; dish uuid; req uuid; token text:=repeat('b',64); blocked boolean; old_id uuid;
+begin
+ r:=public.chef_register('اختبار تدقيق','0600000081','casablanca','الدار البيضاء','اختبار','m','483927');
+ c:=(r->>'chef_id')::uuid;t:=r->>'session_token';
+ perform public.chef_order_settings(t,'{"fulfilment_type":"pickup","pickup_instructions":"عنوان اختبار خاص","work_days":["الجمعة"]}');
+ execute 'set local role anon';
+ dish:=public.chef_save_reference_dish(t,null,'{"name":"كسكس","price":40}','{"specialty":"أكلات تقليدية وشعبية","group_pricing":true}',gen_random_uuid());
+ r:=public.food_request_create(c,dish,5,jsonb_build_object('name','زبون اختبار','phone','0600000082','requested_at',now()+interval '2 days'),token);
+ if (r->>'estimate')::numeric<>200 then raise exception 'FAIL estimate';end if;
+ if public.food_request_create(c,dish,5,jsonb_build_object('name','زبون اختبار','phone','0600000082','requested_at',now()+interval '2 days'),token)->>'order_ref'<>r->>'order_ref' then raise exception 'FAIL duplicate request';end if;
+ r:=public.food_request_customer(token);req:=(r->>'id')::uuid;
+ if r?'access_hash' then raise exception 'FAIL secret disclosure';end if;
+ blocked:=false;begin perform public.food_request_chef_action('wrong',req,'discussing');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL session isolation';end if;
+ perform public.food_request_chef_action(t,req,'discussing');
+ perform public.food_request_chef_action(t,req,'agreed');
+ r:=public.food_request_customer(token);
+ if r->>'status'<>'preparing' or r->>'chef_agreed_at' is null or r->>'customer_agreed_at' is not null then raise exception 'FAIL phone agreement actor or state';end if;
+ blocked:=false;begin perform public.food_request_customer_action(token,'rate','{"rating":5}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL rating before receipt';end if;
+ perform public.food_request_chef_action(t,req,'ready');perform public.food_request_chef_action(t,req,'delivered');
+ if public.food_request_customer(token)->>'received_at' is not null then raise exception 'FAIL fabricated customer receipt';end if;
+ perform public.food_request_chef_action(t,req,'reminder');
+ blocked:=false;begin perform public.food_request_chef_action(t,req,'reminder');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL reminder interval';end if;
+ perform public.food_request_customer_action(token,'received');
+ perform public.food_request_customer_action(token,'rate','{"rating":4,"feedback":"اختبار"}');
+ blocked:=false;begin perform public.food_request_customer_action(token,'rate','{"rating":5}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL duplicate rating';end if;
+ blocked:=false;begin perform public.food_request_chef_action(t,req,'cancelled','{"reason":"اختبار"}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL cancellation after receipt';end if;
+ -- Reuse a separate transaction-only request to check the rejection paths.
+ perform public.food_request_create(c,null,15,jsonb_build_object('dish','طبق حسب الرغبة','name','زبون اختبار','phone','0600000083','requested_at',now()+interval '2 days'),repeat('c',64));
+ r:=public.food_request_customer(repeat('c',64));old_id:=(r->>'id')::uuid;
+ if r->>'estimate' is not null then raise exception 'FAIL fabricated custom price';end if;
+ perform public.food_request_chef_action(t,old_id,'discussing');
+ perform public.food_request_chef_action(t,old_id,'cancelled','{"reason":"لم نتفق"}');
+ if public.food_request_customer(repeat('c',64))->>'status'<>'cancelled' then raise exception 'FAIL cancel discussing';end if;
+ execute 'reset role';update public.food_requests set status='pending',requested_at=now()-interval '1 day' where id=old_id;
+ execute 'set local role anon';
+ blocked:=false;
+ begin perform public.food_request_chef_action(t,old_id,'discussing');
+ exception when others then if sqlerrm<>'request expired' then raise exception 'FAIL wrong overdue error: %',sqlerrm;end if;blocked:=true;end;
+ if not blocked or public.food_request_customer(repeat('c',64))->>'status'<>'pending' then raise exception 'FAIL expired acceptance';end if;
+ perform public.food_request_chef_action(t,old_id,'rejected','{"reason":"فات الموعد"}');
+ -- Compatibility: an old proposed/accepted-late request can be resolved by phone.
+ execute 'reset role';update public.food_requests set status='proposed' where id=old_id;execute 'set local role anon';
+ blocked:=false;begin perform public.food_request_chef_action(t,old_id,'agreed');
+ exception when others then if sqlerrm<>'new agreed time required' then raise;end if;blocked:=true;end;
+ if not blocked then raise exception 'FAIL silent past agreement';end if;
+ perform public.food_request_chef_action(t,old_id,'agreed',jsonb_build_object('at',now()+interval '1 day'));
+ r:=public.food_request_customer(repeat('c',64));
+ if r->>'status'<>'preparing' or (r->>'agreed_at')::timestamptz<=now() or (r->>'requested_at')::timestamptz>=now() then raise exception 'FAIL reschedule snapshot';end if;
+ if has_table_privilege('anon','public.food_requests','select') or has_table_privilege('authenticated','public.food_requests','select') or has_table_privilege('anon','public.food_request_events','select') then raise exception 'FAIL privacy';end if;
+ blocked:=false;begin perform public.food_request_admin();exception when others then blocked:=true;end;
+ if not blocked then raise exception 'FAIL admin authorization';end if;
+ if (select rating_count from public.food_request_reputation() where chef_id=c)<>1 then raise exception 'FAIL reputation';end if;
+ execute 'reset role';
+ if (select count(*) from public.food_request_events where request_id=req)<7 then raise exception 'FAIL audit events';end if;
+end $$;
+select 'PASS direct contact, cancellation, expiry, rescheduling, delivery, receipt, rating, isolation' as result;
+rollback;
