@@ -104,18 +104,26 @@ navigateBack=async function(){
  finally{restoringNavigationState=false;screenTrail.splice(0,screenTrail.length,...navigationTrail.map(x=>x.screen));saveNavigationState();}
 };
 async function restoreNavigationState(){
- if(/^#(?:order|kitchen)=/.test(location.hash))return;
  let saved;try{saved=JSON.parse(sessionStorage.getItem(OMMI_NAV_STATE_KEY)||'null');}catch{}
  const current=saved?.current||saved;
- if(!current?.screen){await restoreRecentOrder();return;}
- restoringNavigationState=true;navigationTrail=Array.isArray(saved.trail)?saved.trail:[];
- try{if(!await openNavigationState(current))navigationTrail=[];}
+ const order=location.hash.match(/^#order=([0-9a-f]{64})$/);
+ const kitchen=location.hash.match(/^#kitchen=([0-9a-f-]{36})$/i);
+ if(!order&&!kitchen&&!current?.screen){await restoreRecentOrder();return;}
+ const sameLink=order?current?.screen==='customerMealTracking'&&current.token===order[1]:kitchen?current?.screen==='orderModal'&&current.chefId===kitchen[1]:true;
+ restoringNavigationState=true;navigationTrail=sameLink&&Array.isArray(saved?.trail)?saved.trail:[];
+ try{
+  if(order&&!sameLink)await openCustomerMealOrder(order[1]);
+  else if(kitchen&&!sameLink)await followKitchenLink();
+  else if(!await openNavigationState(current))navigationTrail=[];
+ }
  catch{navigationRestoreFailed=true;showToast('تعذر استعادة الصفحة الآن. حدّثها للمحاولة مجددًا.');return;}
  finally{restoringNavigationState=false;}
  screenTrail.splice(0,screenTrail.length,...navigationTrail.map(x=>x.screen));saveNavigationState();
 }
 // Avoid two independent startup handlers racing to replace the restored page.
 window.removeEventListener('DOMContentLoaded',restoreRecentOrder);
+window.removeEventListener('DOMContentLoaded',followOrderLink);
+window.removeEventListener('DOMContentLoaded',followKitchenLinkOnReady);
 window.addEventListener('DOMContentLoaded',restoreNavigationState,{once:true});
 window.addEventListener('pagehide',saveNavigationState);
 window.addEventListener('beforeunload',saveNavigationState);

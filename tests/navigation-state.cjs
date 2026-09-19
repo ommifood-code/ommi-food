@@ -45,9 +45,13 @@ function reload(w,url){w.dispatchEvent(new w.Event('pagehide'));return create(w,
  w.showScreen('home');assert.equal(w.location.hash,'');w=reload(w);await tick();assert.equal(active(w),'home','intentional home wins over recent receipt');
  w.document.getElementById('homeMyOrdersBtn').click();w=reload(w);await tick();assert.equal(active(w),'myMealReceipts');
  const b=[...w.document.querySelectorAll('#myMealReceipts button')].find(b=>b.textContent==='كسكس');assert.ok(b);b.click();await tick();assert.equal(active(w),'customerMealTracking');
+ w=reload(w);await tick();assert.equal(active(w),'customerMealTracking');await w.navigateBack();assert.equal(active(w),'myMealReceipts','order deep-link refresh preserves previous screen');
  // Closing a tab discards session navigation, but stored receipts remain usable.
  w.showScreen('home');w.sessionStorage.clear();w=reload(w);await tick();assert.ok(w.localStorage.getItem('ommi_meal_receipts').includes(token));
  // Never save secret PIN fields when a login dialog is open.
  w.openChefLogin();w.document.querySelector('#chefLoginModal input[type=password]').value='483927';w.dispatchEvent(new w.Event('pagehide'));assert.ok(!w.sessionStorage.getItem('ommi_navigation_state_v1').includes('483927'));
+ chef.id='11111111-1111-4111-8111-111111111111';offer.chef_id=chef.id;
+ w=create(null,'https://test.invalid/#kitchen='+chef.id);await tick();assert.equal(active(w),'orderModal','kitchen link opens once');
+ w.document.getElementById('mealCustomerForm').elements.people.value='7';w=reload(w);await tick();assert.equal(active(w),'orderModal');assert.equal(w.document.getElementById('mealCustomerForm').elements.people.value,'7','kitchen link retains draft');await w.navigateBack();assert.equal(active(w),'home');
  assert.deepEqual(errors,[]);console.log('PASS public/chef refresh, draft and dish context, previous screen, inert whitespace, home, private session, receipt recovery, PIN exclusion');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>windows.forEach(w=>w.close()));
