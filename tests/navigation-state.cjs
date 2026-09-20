@@ -26,7 +26,7 @@ function reload(w,url){w.dispatchEvent(new w.Event('pagehide'));return create(w,
  w.document.querySelector('#dishList button').click();let f=w.document.getElementById('mealCustomerForm');
  f.elements.name.value='اختبار حفظ الصفحة';f.elements.phone.value='0600000002';f.elements.people.value='5';f.elements.notes.value='رغبة محفوظة';f.elements.requested_at.value='2030-01-01T12:00';
  w=reload(w);await tick();assert.equal(active(w),'orderModal');assert.equal(w.eval('activeChef.id'),'chef');
- f=w.document.getElementById('mealCustomerForm');assert.equal(f.elements.people.value,'5');assert.equal(f.elements.notes.value,'رغبة محفوظة');assert.equal(w.document.querySelector('#dishList button').getAttribute('aria-pressed'),'true');
+ f=w.document.getElementById('mealCustomerForm');assert.equal(f.elements.people.value,'5');assert.equal(f.elements.notes.value,'رغبة محفوظة');assert.equal(w.document.querySelector('#dishList button').getAttribute('aria-pressed'),'false','refresh does not select a dish');assert.equal(w.eval('selectedMealOffer'),null);
  w.document.querySelector('#orderModal .meal-form').click();assert.equal(active(w),'orderModal','blank space does not navigate');
  await w.navigateBack();assert.equal(active(w),'chefs');await w.navigateBack();assert.equal(active(w),'home');assert.equal(w.document.getElementById('home').outerHTML,home,'approved homepage unchanged');
  // The map picker restores its point and returns to the original screen after save.

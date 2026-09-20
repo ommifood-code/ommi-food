@@ -13,7 +13,7 @@ function navigationSnapshot(){
  const id=screen.id;if(!navigationPublic.has(id)&&!navigationPrivate.has(id))return null;
  const state={screen:id,fields:navigationFields(screen),scroll:window.scrollY};
  if(navigationPrivate.has(id))state.owner=currentChefId;
- if(id==='orderModal'){state.chefId=activeChef?.id;state.offerId=selectedMealOffer?.id||null;}
+ if(id==='orderModal')state.chefId=activeChef?.id;
  if(id==='mealOfferEditor')state.offerId=screen.dataset.offerId||null;
  if(id==='customerMealTracking')state.token=requestTrackingToken||mealTrackingToken;
  if(id==='locationPicker'){state.locationOwner=screen.dataset.locationOwner==='true';state.point=JSON.parse(screen.dataset.point||'null');if(state.locationOwner)state.owner=currentChefId;}
@@ -45,13 +45,12 @@ function restoreNavigationFields(state){
   for(const field of fields){
    if(['password','file','hidden'].includes(field.type))continue;
    if(['checkbox','radio'].includes(field.type)){if(field.value===entry.value)field.checked=Boolean(entry.checked);}
-   else field.value=entry.value;
+   else field.value=state.screen==='orderModal'&&field.name==='requested_at'?requestDraftTime(entry.value):entry.value;
   }
  }
  for(const select of screen.querySelectorAll('select'))select.dispatchEvent(new Event('change',{bubbles:true}));
  if(state.screen==='orderModal'){
   document.querySelector('#mealCustomerForm [name=people]')?.dispatchEvent(new Event('input',{bubbles:true}));
-  if(state.offerId){const index=mealOffers.findIndex(o=>o.id===state.offerId);if(index>=0)document.querySelectorAll('#dishList button')[index]?.click();}
  }
  if(state.modal){const modal=document.getElementById(state.modal.id);if(modal){openModal(modal);restoreNavigationFields({screen:modal.id,fields:state.modal.fields});}}
  window.scrollTo(0,Number(state.scroll)||0);

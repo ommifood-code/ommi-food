@@ -4,6 +4,8 @@ Use the latest feature branch and `PRODUCT_DECISIONS.md` for product behavior. H
 
 ## Current checks
 
+- `optional-request-time.sql`: one BEGIN/ROLLBACK call; omitted, empty and null appointment values remain NULL through acceptance/preparation, and an explicit appointment beyond sixty days remains intact. UI/navigation checks require no selected dish on entry or restore.
+
 - `direct-contact.sql`: run **the whole file in one SQL call** after the consistency migration. BEGIN/ROLLBACK fixtures verify request idempotency, acceptance, phone agreement actor, preparation, ready/delivered, distinct receipt, rating gates, cancellation, overdue refusal, rescheduling old requests, capability isolation and private tables. No fixtures persist.
 - `customer-led-ui.cjs`: actual application scripts in jsdom, with an in-memory RPC double. Checks dish entry, reference/custom requests, contact links, preparation/delivery/receipt/rating and saved receipts. It does not replace backend checks or a phone test.
 - `navigation-state.cjs`: fresh DOM after refresh; public/private screens, form drafts and edited dish ID, previous screen, inert blank space, approved homepage stability, session denial, receipts and PIN exclusion.
