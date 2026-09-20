@@ -1,21 +1,365 @@
 /* Ommi Food: secure chef identity + optional dish images. */
-if(!document.querySelector('link[href*="dish-images.css"]')){const l=document.createElement('link');l.rel='stylesheet';l.href='dish-images.css?v=20260905-1';document.head.appendChild(l)}
-const CHEF_SESSION_KEY='ommi_chef_session';let chefSessionToken=localStorage.getItem(CHEF_SESSION_KEY)||'';const _baseAddDish=addDish;let kitchenEditorMode='setup';
-function addIdentityUi(){const area=document.getElementById('joinArea');if(area&&!document.getElementById('joinPin')){const pin=document.createElement('input');pin.id='joinPin';pin.className='field';pin.type='password';pin.inputMode='numeric';pin.maxLength=6;pin.autocomplete='new-password';pin.placeholder='رمز سري من 6 أرقام';area.insertAdjacentElement('afterend',pin);const note=document.createElement('div');note.className='simple-join-copy';note.textContent='احتفظ بالرمز للدخول إلى مطبخك مع رقم هاتفك.';pin.insertAdjacentElement('afterend',note)}const invite=document.querySelector('.chef-invite');if(invite&&!document.getElementById('chefLoginBtn')){const b=document.createElement('button');b.id='chefLoginBtn';b.type='button';b.className='admin-secondary full';b.textContent='لدي مطبخ بالفعل';b.style.marginTop='10px';invite.appendChild(b);b.onclick=openChefLogin}}
-function openChefLogin(){let m=document.getElementById('chefLoginModal');if(!m){m=document.createElement('div');m.id='chefLoginModal';m.className='modal';m.setAttribute('aria-hidden','true');m.innerHTML=`<div class="modal-card small"><button class="close" type="button">×</button><h2>الدخول إلى مطبخي</h2><p class="simple-join-copy">أدخل رقم الهاتف والرمز السري الذي اخترته عند الانضمام.</p><input id="chefLoginPhone" class="field" inputmode="tel" placeholder="رقم الهاتف"><input id="chefLoginPin" class="field" type="password" inputmode="numeric" maxlength="6" placeholder="الرمز السري"><button id="chefLoginSubmit" class="primary full">دخول آمن</button></div>`;document.body.appendChild(m);m.querySelector('.close').onclick=()=>closeModal(m);m.querySelector('#chefLoginSubmit').onclick=chefLogin}openModal(m)}
-function kitchenSetupComplete(c){const ds=Array.isArray(c?.dishes)?c.dishes.filter(d=>d?.name):[];return !!String(c?.specialty||'').trim()&&ds.length>0&&!!String(c?.work_days||'').trim()}
-async function chefLogin(){const phone=document.getElementById('chefLoginPhone').value.trim(),pin=document.getElementById('chefLoginPin').value.trim(),btn=document.getElementById('chefLoginSubmit');if(!/^0[5-7][0-9]{8}$/.test(phone)||!/^\d{6}$/.test(pin)){showToast('تحقق من رقم الهاتف والرمز السري.');return}btn.disabled=true;btn.textContent='جاري التحقق...';const{data,error}=await db.rpc('chef_login',{p_phone:phone,p_pin:pin});btn.disabled=false;btn.textContent='دخول آمن';if(error){showToast('تعذر التحقق حاليًا. حاول مرة أخرى.');return}if(!data?.ok){showToast(data?.error==='temporarily_locked'?'تم إيقاف المحاولات مؤقتًا لحماية الحساب.':'رقم الهاتف أو الرمز السري غير صحيح.');return}chefSessionToken=data.session_token;localStorage.setItem(CHEF_SESSION_KEY,chefSessionToken);closeModal(document.getElementById('chefLoginModal'));const c=await restoreChefSession(false);if(!c)return;openKitchenDashboard(c)}
-async function showCorrectionRequest(){document.querySelector('.chef-correction-banner')?.remove();if(!chefSessionToken)return;const{data,error}=await db.rpc('chef_correction_status',{p_session_token:chefSessionToken});if(error||!data?.length||!data[0].message)return;const c=data[0],box=document.createElement('div');box.className='chef-correction-banner';box.innerHTML=`<strong>طلب تصحيح من Ommi Food</strong><span>${escapeHtml(c.message)}</span><small>${c.submitted_at?'أرسلت تعديلات بعد هذا الطلب. يمكنك تعديلها مجددًا إن لزم.':'عدّل المعلومات المطلوبة ثم احفظ مطبخك.'}</small>`;document.querySelector('.kitchen-builder')?.prepend(box)}
-async function restoreChefSession(open=false){if(!chefSessionToken)return false;const{data,error}=await db.rpc('chef_session_status',{p_session_token:chefSessionToken});if(error||!data?.length){localStorage.removeItem(CHEF_SESSION_KEY);chefSessionToken='';return false}const c=data[0];currentChefId=c.id;currentChefName=c.name;currentChefArea=c.area||'';currentChefGender=c.gender;if(open)await openKitchenDashboard(c);return c}
-function attachImage(row,imageUrl=null){if(!row||row.querySelector('.dish-image-wrap'))return;const w=document.createElement('div');w.className='dish-image-wrap';w.innerHTML=`<label class="dish-image-label"><span>صورة الطبق (اختياري)</span><small>يمكن إضافتها لاحقًا.</small><input class="dish-image" type="file" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="dish-image-btn">اختيار صورة</button></label><div class="dish-image-preview" hidden><img alt="معاينة صورة الطبق"><button type="button" class="dish-image-remove">حذف الصورة</button></div>`;row.appendChild(w);const input=w.querySelector('.dish-image'),button=w.querySelector('.dish-image-btn'),preview=w.querySelector('.dish-image-preview'),img=preview.querySelector('img');if(imageUrl){img.src=imageUrl;img.dataset.savedUrl=imageUrl;preview.hidden=false;button.textContent='تغيير الصورة'}button.onclick=()=>input.click();input.onchange=()=>{const f=input.files?.[0];if(!f)return;if(!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5*1024*1024){input.value='';showToast('اختر JPG أو PNG أو WebP بحجم لا يتجاوز 5 MB.');return}if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);img.dataset.objectUrl=URL.createObjectURL(f);img.src=img.dataset.objectUrl;preview.hidden=false;button.textContent='تغيير الصورة'};w.querySelector('.dish-image-remove').onclick=()=>{if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);input.value='';img.removeAttribute('src');delete img.dataset.objectUrl;delete img.dataset.savedUrl;preview.hidden=true;button.textContent='اختيار صورة'}}
-addDish=function(name='',price='',imageUrl=null){_baseAddDish(name,price);const rows=document.querySelectorAll('.builder-dish-row');attachImage(rows[rows.length-1],imageUrl)};
-async function uploadImageSecure(file){const form=new FormData();form.append('session_token',chefSessionToken);form.append('file',file);const r=await fetch(`${SUPABASE_URL}/functions/v1/chef-dish-image`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`},body:form});const out=await r.json();if(!r.ok||!out.image_url)throw new Error(out.error||'upload failed');return out.image_url}
-async function collectDishesSecure(){const result=[];for(const row of document.querySelectorAll('.builder-dish-row')){const name=row.querySelector('.dish-name').value.trim(),price=row.querySelector('.dish-price').value.trim();if(!name)continue;const input=row.querySelector('.dish-image'),img=row.querySelector('.dish-image-preview img');let image_url=img?.dataset.savedUrl||null;if(input?.files?.[0])image_url=await uploadImageSecure(input.files[0]);result.push({name,price,image_url})}return result}
-const joinBtn=document.getElementById('submitJoinBtn');joinBtn.onclick=async()=>{clearJoinErrors();const selectedGender=document.querySelector('.gender.active');const gender=selectedGender?.dataset.gender==='male'?'m':selectedGender?.dataset.gender==='female'?'f':'';const name=cleanName(document.getElementById('joinName').value),phone=document.getElementById('joinPhone').value.trim(),area=document.getElementById('joinArea').value.trim(),pin=document.getElementById('joinPin').value.trim(),consent=document.getElementById('joinConsent').checked;if(!name){joinFieldError('joinName','أدخل اسمك الأول.');return}if(!gender){showToast('اختر الجنس: أنثى أو ذكر.');return}if(!/^0[5-7][0-9]{8}$/.test(phone)){joinFieldError('joinPhone','أدخل رقم هاتف مغربي صحيحًا من 10 أرقام.');return}if(!area){joinFieldError('joinArea','أدخل الحي أو المنطقة.');return}if(!/^\d{6}$/.test(pin)){joinFieldError('joinPin','اختر رمزًا سريًا من 6 أرقام.');return}if(!consent){document.getElementById('joinConsent').closest('label')?.classList.add('consent-invalid');showToast('وافق على شروط المنصة للمتابعة');return}joinGender=gender;joinBtn.disabled=true;joinBtn.textContent='جاري فتح مطبخك...';const{data,error}=await db.rpc('chef_register',{p_name:name,p_phone:phone,p_city:'casablanca',p_city_label:'الدار البيضاء',p_area:area,p_gender:gender,p_pin:pin});joinBtn.disabled=false;joinBtn.textContent='ابدأ مطبخك';if(error){showToast(error.message?.includes('phone already')?'هذا الرقم مرتبط بمطبخ موجود. استخدم «لدي مطبخ بالفعل».':'تعذر بدء المطبخ حاليًا.');return}currentChefId=data.chef_id;currentChefName=name;currentChefArea=area;currentChefGender=gender;chefSessionToken=data.session_token;localStorage.setItem(CHEF_SESSION_KEY,chefSessionToken);closeModal(joinModal);kitchenEditorMode='setup';const registered=await restoreChefSession(false);if(registered)openKitchenDashboard(registered)};
-async function openKitchenEditor(c,mode='edit',addBlank=false){kitchenEditorMode=mode;openBuilder();document.getElementById('builderSpecialty').value=c?.specialty||'';document.getElementById('builderDishes').innerHTML='';const ds=Array.isArray(c?.dishes)?c.dishes:[];(ds.length?ds:[{name:'',price:''}]).forEach(d=>addDish(d.name||'',d.price||'',d.image_url||null));if(addBlank)addDish();const days=String(c?.work_days||'').split('،').map(x=>x.trim()).filter(Boolean);document.querySelectorAll('#builderDays button').forEach(b=>b.classList.toggle('selected',days.includes(b.dataset.day)));if(c?.fulfilment_type)document.getElementById('builderFulfilment').value=c.fulfilment_type;syncDeliveryUi();if(c?.delivery_by)document.getElementById('builderDeliveryBy').value=c.delivery_by;updatePreview();const submit=document.getElementById('submitKitchenBtn');submit.textContent=mode==='setup'?'حفظ وفتح مطبخي':'حفظ التعديلات';const top=document.querySelector('#buildKitchen .topbar strong');if(top)top.textContent=mode==='setup'?'إعداد مطبخي':'تعديل معلومات المطبخ';if(mode==='edit')await showCorrectionRequest();if(addBlank){setTimeout(()=>{const rows=document.querySelectorAll('.builder-dish-row');rows[rows.length-1]?.scrollIntoView({behavior:'smooth',block:'center'});rows[rows.length-1]?.querySelector('.dish-name')?.focus()},50)}}
-function renderKitchenDashboard(c){const screen=ensureKitchenDashboard(),ds=Array.isArray(c?.dishes)?c.dishes.filter(d=>d?.name):[];screen.querySelector('#myKitchenTitle').textContent=`مطبخ ${prefix(c.gender)} ${c.name}`;screen.querySelector('#myKitchenMeta').textContent=`${c.area||''} · ${c.city_label||'الدار البيضاء'}`;screen.querySelector('#myKitchenSpecialty').textContent=c.specialty||'';const list=screen.querySelector('#myKitchenDishes');list.innerHTML=ds.length?ds.map((d,i)=>{const u=safeImageUrl(d.image_url);return `<article class="dish-option${u?' has-image':''}" data-my-dish="${i}">${u?`<img class="dish-option-image" src="${escapeHtml(u)}" alt="${escapeHtml(d.name)}">`:'<span class="dish-option-placeholder">بدون صورة</span>'}<span class="dish-option-info"><strong>${escapeHtml(d.name)}</strong><span>${mealMoney(d.price||0)}</span></span></article>`}).join(''):'<div class="empty-state"><strong>لا توجد أطباق بعد.</strong></div>';screen.dataset.chef=JSON.stringify(c);return screen}
-function ensureKitchenDashboard(){let screen=document.getElementById('chefKitchenDashboard');if(screen)return screen;screen=document.createElement('section');screen.id='chefKitchenDashboard';screen.className='screen';screen.innerHTML=`<header class="topbar"><button class="back" id="myKitchenHome" type="button">←</button><div><strong>مطبخي</strong><span>إدارة مطبخك وأطباقك</span></div><span class="mini-logo">Ommi Food</span></header><div class="content kitchen-builder"><div class="welcome-kitchen"><span>مطبخي</span><h1 id="myKitchenTitle"></h1><p id="myKitchenMeta"></p><p id="myKitchenSpecialty"></p></div><div class="builder-step"><div><h2>أطباقي</h2><p>الأطباق المحفوظة في مطبخك</p></div></div><div id="myKitchenDishes" class="dish-list"></div><div class="builder-actions" style="margin-top:18px"><button type="button" class="primary full" id="myKitchenAddDish">+ إضافة طبق</button><button type="button" class="admin-secondary full" id="myKitchenEdit">تعديل معلومات المطبخ والأطباق</button><button type="button" class="admin-secondary full" id="myKitchenPublic">استكشاف المطابخ القريبة</button></div></div>`;document.querySelector('main')?.appendChild(screen)||document.body.appendChild(screen);screen.querySelector('#myKitchenHome').onclick=()=>showScreen('home');screen.querySelector('#myKitchenEdit').onclick=async()=>{const c=await restoreChefSession(false);if(c)await openKitchenPreferences()};screen.querySelector('#myKitchenAddDish').onclick=async()=>{const c=await restoreChefSession(false);if(c)await openMealOfferForm()};screen.querySelector('#myKitchenPublic').onclick=async()=>{showScreen('chefs');await loadChefs()};return screen}
-function openKitchenDashboard(c){renderKitchenDashboard(c);mountMealDashboard(c);showScreen('chefKitchenDashboard')}
-document.getElementById('submitKitchenBtn').onclick=async function(){const specialty=document.getElementById('builderSpecialty').value.trim(),basic=collectDishes(),days=[...document.querySelectorAll('#builderDays button.selected')].map(b=>b.dataset.day),fulfilment=document.getElementById('builderFulfilment').value,deliveryBy=(fulfilment==='delivery'||fulfilment==='both')?document.getElementById('builderDeliveryBy').value:'customer';if(!chefSessionToken){showToast('انتهت جلسة المطبخ. ادخل من «لدي مطبخ بالفعل».');return}if(!specialty){showToast('اختر نوع الأطباق قبل الحفظ.');return}if(basic.some(d=>!d.price)){showToast('أضف ثمنًا لكل طبق.');return}const firstSetup=kitchenEditorMode==='setup';this.disabled=true;this.textContent='جاري الحفظ...';try{const dishes=await collectDishesSecure();const{error}=await db.rpc('chef_secure_save',{p_session_token:chefSessionToken,p_bio:null,p_specialty:specialty,p_dishes:dishes,p_work_days:days.join('، '),p_work_hours:null,p_fulfilment_type:fulfilment,p_delivery_by:deliveryBy});if(error)throw error;this.disabled=false;const c=await restoreChefSession(false);if(!c)throw new Error('session refresh failed');showToast(firstSetup?'تم ربط مطبخ منزلك بالمنصة.':'تم حفظ التعديلات.');openKitchenDashboard(c)}catch(e){console.error(e);showToast('تعذر الحفظ. لم نفقد بياناتك، حاول مرة أخرى.');this.disabled=false;this.textContent=firstSetup?'حفظ وفتح مطبخي':'حفظ التعديلات'}};
-addIdentityUi();restoreChefSession(false);
+const CHEF_SESSION_KEY = "ommi_chef_session";
+let chefSessionToken = localStorage.getItem(CHEF_SESSION_KEY) || "";
+let kitchenEditorMode = "setup";
+function addIdentityUi() {
+  const area = document.getElementById("joinArea");
+  if (area && !document.getElementById("joinPin")) {
+    const pin = document.createElement("input");
+    pin.id = "joinPin";
+    pin.className = "field";
+    pin.type = "password";
+    pin.inputMode = "numeric";
+    pin.maxLength = 6;
+    pin.autocomplete = "new-password";
+    pin.placeholder = "رمز سري من 6 أرقام";
+    area.insertAdjacentElement("afterend", pin);
+    const note = document.createElement("div");
+    note.className = "simple-join-copy";
+    note.textContent = "احتفظ بالرمز للدخول إلى مطبخك مع رقم هاتفك.";
+    pin.insertAdjacentElement("afterend", note);
+  }
+}
+function openChefLogin() {
+  let m = document.getElementById("chefLoginModal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "chefLoginModal";
+    m.className = "modal";
+    m.setAttribute("aria-hidden", "true");
+    m.innerHTML = `<div class="modal-card small"><button class="close" type="button">×</button><h2>الدخول إلى مطبخي</h2><p class="simple-join-copy">أدخل رقم الهاتف والرمز السري الذي اخترته عند الانضمام.</p><input id="chefLoginPhone" class="field" inputmode="tel" placeholder="رقم الهاتف"><input id="chefLoginPin" class="field" type="password" inputmode="numeric" maxlength="6" placeholder="الرمز السري"><button id="chefLoginSubmit" class="primary full">دخول آمن</button></div>`;
+    document.body.appendChild(m);
+    m.querySelector("#chefLoginSubmit").onclick = chefLogin;
+  }
+  openModal(m);
+}
+function kitchenSetupComplete(c) {
+  const ds = Array.isArray(c?.dishes) ? c.dishes.filter((d) => d?.name) : [];
+  return (
+    !!String(c?.specialty || "").trim() &&
+    ds.length > 0 &&
+    !!String(c?.work_days || "").trim()
+  );
+}
+async function chefLogin() {
+  const phone = document.getElementById("chefLoginPhone").value.trim(),
+    pin = document.getElementById("chefLoginPin").value.trim(),
+    btn = document.getElementById("chefLoginSubmit");
+  if (!/^0[5-7][0-9]{8}$/.test(phone) || !/^\d{6}$/.test(pin)) {
+    showToast("تحقق من رقم الهاتف والرمز السري.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "جاري التحقق...";
+  const { data, error } = await db.rpc("chef_login", {
+    p_phone: phone,
+    p_pin: pin,
+  });
+  btn.disabled = false;
+  btn.textContent = "دخول آمن";
+  if (error) {
+    showToast("تعذر التحقق حاليًا. حاول مرة أخرى.");
+    return;
+  }
+  if (!data?.ok) {
+    showToast(
+      data?.error === "temporarily_locked"
+        ? "تم إيقاف المحاولات مؤقتًا لحماية الحساب."
+        : "رقم الهاتف أو الرمز السري غير صحيح.",
+    );
+    return;
+  }
+  chefSessionToken = data.session_token;
+  localStorage.setItem(CHEF_SESSION_KEY, chefSessionToken);
+  closeModal(document.getElementById("chefLoginModal"));
+  const c = await restoreChefSession(false);
+  if (!c) return;
+  openKitchenDashboard(c);
+}
+async function showCorrectionRequest() {
+  document.querySelector(".chef-correction-banner")?.remove();
+  if (!chefSessionToken) return;
+  const { data, error } = await db.rpc("chef_correction_status", {
+    p_session_token: chefSessionToken,
+  });
+  if (error || !data?.length || !data[0].message) return;
+  const c = data[0],
+    box = document.createElement("div");
+  box.className = "chef-correction-banner";
+  box.innerHTML = `<strong>طلب تصحيح من Ommi Food</strong><span>${escapeHtml(c.message)}</span><small>${c.submitted_at ? "أرسلت تعديلات بعد هذا الطلب. يمكنك تعديلها مجددًا إن لزم." : "عدّل المعلومات المطلوبة ثم احفظ مطبخك."}</small>`;
+  document.querySelector(".kitchen-builder")?.prepend(box);
+}
+async function restoreChefSession(open = false) {
+  if (!chefSessionToken) return false;
+  const { data, error } = await db.rpc("chef_session_status", {
+    p_session_token: chefSessionToken,
+  });
+  if (error || !data?.length) {
+    localStorage.removeItem(CHEF_SESSION_KEY);
+    chefSessionToken = "";
+    return false;
+  }
+  const c = data[0];
+  currentChefId = c.id;
+  currentChefName = c.name;
+  currentChefArea = c.area || "";
+  currentChefGender = c.gender;
+  if (open) await openKitchenDashboard(c);
+  return c;
+}
+function attachImage(row, imageUrl = null) {
+  if (!row || row.querySelector(".dish-image-wrap")) return;
+  const w = document.createElement("div");
+  w.className = "dish-image-wrap";
+  w.innerHTML = `<label class="dish-image-label"><span>صورة الطبق (اختياري)</span><small>يمكن إضافتها لاحقًا.</small><input class="dish-image" type="file" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="dish-image-btn">اختيار صورة</button></label><div class="dish-image-preview" hidden><img alt="معاينة صورة الطبق"><button type="button" class="dish-image-remove">حذف الصورة</button></div>`;
+  row.appendChild(w);
+  const input = w.querySelector(".dish-image"),
+    button = w.querySelector(".dish-image-btn"),
+    preview = w.querySelector(".dish-image-preview"),
+    img = preview.querySelector("img");
+  if (imageUrl) {
+    img.src = imageUrl;
+    img.dataset.savedUrl = imageUrl;
+    preview.hidden = false;
+    button.textContent = "تغيير الصورة";
+  }
+  button.onclick = () => input.click();
+  input.onchange = () => {
+    const f = input.files?.[0];
+    if (!f) return;
+    if (
+      !["image/jpeg", "image/png", "image/webp"].includes(f.type) ||
+      f.size > 5 * 1024 * 1024
+    ) {
+      input.value = "";
+      showToast("اختر JPG أو PNG أو WebP بحجم لا يتجاوز 5 MB.");
+      return;
+    }
+    if (img.dataset.objectUrl) URL.revokeObjectURL(img.dataset.objectUrl);
+    img.dataset.objectUrl = URL.createObjectURL(f);
+    img.src = img.dataset.objectUrl;
+    preview.hidden = false;
+    button.textContent = "تغيير الصورة";
+  };
+  w.querySelector(".dish-image-remove").onclick = () => {
+    if (img.dataset.objectUrl) URL.revokeObjectURL(img.dataset.objectUrl);
+    input.value = "";
+    img.removeAttribute("src");
+    delete img.dataset.objectUrl;
+    delete img.dataset.savedUrl;
+    preview.hidden = true;
+    button.textContent = "اختيار صورة";
+  };
+}
+function addDish(name = "", price = "", imageUrl = null) {
+  const wrap = document.getElementById("builderDishes"),
+    row = document.createElement("div");
+  row.className = "builder-dish-row";
+  row.innerHTML = `<input class="field dish-name" placeholder="اسم الطبق" value="${escapeHtml(name)}"><input class="field dish-price" inputmode="decimal" placeholder="الثمن بالدرهم" value="${escapeHtml(price)}"><button type="button" class="remove-dish">×</button>`;
+  row.querySelector(".remove-dish").onclick = () => {
+    row.remove();
+    updatePreview();
+  };
+  row.querySelectorAll("input").forEach((i) => (i.oninput = updatePreview));
+  wrap.appendChild(row);
+  attachImage(row, imageUrl);
+  updatePreview();
+}
+async function uploadImageSecure(file) {
+  const form = new FormData();
+  form.append("session_token", chefSessionToken);
+  form.append("file", file);
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/chef-dish-image`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    body: form,
+  });
+  const out = await r.json();
+  if (!r.ok || !out.image_url) throw new Error(out.error || "upload failed");
+  return out.image_url;
+}
+async function collectDishesSecure() {
+  const result = [];
+  for (const row of document.querySelectorAll(".builder-dish-row")) {
+    const name = row.querySelector(".dish-name").value.trim(),
+      price = row.querySelector(".dish-price").value.trim();
+    if (!name) continue;
+    const input = row.querySelector(".dish-image"),
+      img = row.querySelector(".dish-image-preview img");
+    let image_url = img?.dataset.savedUrl || null;
+    if (input?.files?.[0]) image_url = await uploadImageSecure(input.files[0]);
+    result.push({ name, price, image_url });
+  }
+  return result;
+}
+const joinBtn = document.getElementById("submitJoinBtn");
+joinBtn.onclick = async () => {
+  clearJoinErrors();
+  const selectedGender = document.querySelector(".gender.active");
+  const gender =
+    selectedGender?.dataset.gender === "male"
+      ? "m"
+      : selectedGender?.dataset.gender === "female"
+        ? "f"
+        : "";
+  const name = cleanName(document.getElementById("joinName").value),
+    phone = document.getElementById("joinPhone").value.trim(),
+    area = document.getElementById("joinArea").value.trim(),
+    pin = document.getElementById("joinPin").value.trim(),
+    consent = document.getElementById("joinConsent").checked;
+  if (!name) {
+    joinFieldError("joinName", "أدخل اسمك الأول.");
+    return;
+  }
+  if (!gender) {
+    showToast("اختر الجنس: أنثى أو ذكر.");
+    return;
+  }
+  if (!/^0[5-7][0-9]{8}$/.test(phone)) {
+    joinFieldError("joinPhone", "أدخل رقم هاتف مغربي صحيحًا من 10 أرقام.");
+    return;
+  }
+  if (!area) {
+    joinFieldError("joinArea", "أدخل الحي أو المنطقة.");
+    return;
+  }
+  if (!/^\d{6}$/.test(pin)) {
+    joinFieldError("joinPin", "اختر رمزًا سريًا من 6 أرقام.");
+    return;
+  }
+  if (!consent) {
+    document
+      .getElementById("joinConsent")
+      .closest("label")
+      ?.classList.add("consent-invalid");
+    showToast("وافق على شروط المنصة للمتابعة");
+    return;
+  }
+  joinGender = gender;
+  joinBtn.disabled = true;
+  joinBtn.textContent = "جاري فتح مطبخك...";
+  const { data, error } = await db.rpc("chef_register", {
+    p_name: name,
+    p_phone: phone,
+    p_city: "casablanca",
+    p_city_label: "الدار البيضاء",
+    p_area: area,
+    p_gender: gender,
+    p_pin: pin,
+  });
+  joinBtn.disabled = false;
+  joinBtn.textContent = "ابدأ مطبخك";
+  if (error) {
+    showToast(
+      error.message?.includes("phone already")
+        ? "هذا الرقم مرتبط بمطبخ موجود. استخدم «لدي مطبخ بالفعل»."
+        : "تعذر بدء المطبخ حاليًا.",
+    );
+    return;
+  }
+  currentChefId = data.chef_id;
+  currentChefName = name;
+  currentChefArea = area;
+  currentChefGender = gender;
+  chefSessionToken = data.session_token;
+  localStorage.setItem(CHEF_SESSION_KEY, chefSessionToken);
+  closeModal(joinModal);
+  kitchenEditorMode = "setup";
+  const registered = await restoreChefSession(false);
+  if (registered) openKitchenDashboard(registered);
+};
+async function openKitchenEditor(c, mode = "edit", addBlank = false) {
+  kitchenEditorMode = mode;
+  openBuilder();
+  document.getElementById("builderSpecialty").value = c?.specialty || "";
+  document.getElementById("builderDishes").innerHTML = "";
+  const ds = Array.isArray(c?.dishes) ? c.dishes : [];
+  (ds.length ? ds : [{ name: "", price: "" }]).forEach((d) =>
+    addDish(d.name || "", d.price || "", d.image_url || null),
+  );
+  if (addBlank) addDish();
+  const days = String(c?.work_days || "")
+    .split("،")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  document
+    .querySelectorAll("#builderDays button")
+    .forEach((b) =>
+      b.classList.toggle("selected", days.includes(b.dataset.day)),
+    );
+  if (c?.fulfilment_type)
+    document.getElementById("builderFulfilment").value = c.fulfilment_type;
+  syncDeliveryUi();
+  if (c?.delivery_by)
+    document.getElementById("builderDeliveryBy").value = c.delivery_by;
+  updatePreview();
+  const submit = document.getElementById("submitKitchenBtn");
+  submit.textContent = mode === "setup" ? "حفظ وفتح مطبخي" : "حفظ التعديلات";
+  const top = document.querySelector("#buildKitchen .topbar strong");
+  if (top)
+    top.textContent = mode === "setup" ? "إعداد مطبخي" : "تعديل معلومات المطبخ";
+  if (mode === "edit") await showCorrectionRequest();
+  if (addBlank) {
+    setTimeout(() => {
+      const rows = document.querySelectorAll(".builder-dish-row");
+      rows[rows.length - 1]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      rows[rows.length - 1]?.querySelector(".dish-name")?.focus();
+    }, 50);
+  }
+}
 
+document.getElementById("submitKitchenBtn").onclick = async function () {
+  const specialty = document.getElementById("builderSpecialty").value.trim(),
+    basic = collectDishes(),
+    days = [...document.querySelectorAll("#builderDays button.selected")].map(
+      (b) => b.dataset.day,
+    ),
+    fulfilment = document.getElementById("builderFulfilment").value,
+    deliveryBy =
+      fulfilment === "delivery" || fulfilment === "both"
+        ? document.getElementById("builderDeliveryBy").value
+        : "customer";
+  if (!chefSessionToken) {
+    showToast("انتهت جلسة المطبخ. ادخل من «لدي مطبخ بالفعل».");
+    return;
+  }
+  if (!specialty) {
+    showToast("اختر نوع الأطباق قبل الحفظ.");
+    return;
+  }
+  if (basic.some((d) => !d.price)) {
+    showToast("أضف ثمنًا لكل طبق.");
+    return;
+  }
+  const firstSetup = kitchenEditorMode === "setup";
+  this.disabled = true;
+  this.textContent = "جاري الحفظ...";
+  try {
+    const dishes = await collectDishesSecure();
+    const { error } = await db.rpc("chef_secure_save", {
+      p_session_token: chefSessionToken,
+      p_bio: null,
+      p_specialty: specialty,
+      p_dishes: dishes,
+      p_work_days: days.join("، "),
+      p_work_hours: null,
+      p_fulfilment_type: fulfilment,
+      p_delivery_by: deliveryBy,
+    });
+    if (error) throw error;
+    this.disabled = false;
+    const c = await restoreChefSession(false);
+    if (!c) throw new Error("session refresh failed");
+    showToast(firstSetup ? "تم ربط مطبخ منزلك بالمنصة." : "تم حفظ التعديلات.");
+    openKitchenDashboard(c);
+  } catch (e) {
+    console.error(e);
+    showToast("تعذر الحفظ. لم نفقد بياناتك، حاول مرة أخرى.");
+    this.disabled = false;
+    this.textContent = firstSetup ? "حفظ وفتح مطبخي" : "حفظ التعديلات";
+  }
+};
+addIdentityUi();

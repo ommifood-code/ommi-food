@@ -6,6 +6,7 @@ const rows=[{...base,id:'late',status:'preparing',chef_agreed_at:past,agreed_at:
 const calls=[],errors=[];w.addEventListener('error',e=>errors.push(e.error));
 w.e=s=>String(s??'');w.adminMoney=v=>v==null?'غير محدد':v+' درهمًا';w.toastMsg=()=>{};w.loadAdminOrders=async()=>{};
 w.db={rpc:async(name,args)=>{calls.push([name,args]);if(args?.p_action==='resolve')rows.find(r=>r.id===args.p_id).complaint_resolved_at=future;if(args?.p_action==='contacted')rows.find(r=>r.id===args.p_id).admin_contacted_at=future;return{data:{requests:rows,metrics:{requests:rows.length}}};}};
+const rules=w.document.createElement('script');rules.textContent=fs.readFileSync(path.join(__dirname,'../order-rules.js'),'utf8');w.document.body.append(rules);
 const script=w.document.createElement('script');script.textContent=fs.readFileSync(path.join(__dirname,'../food-request-admin.js'),'utf8');w.document.body.append(script);
 (async()=>{
  await w.loadRequestAdmin();assert.equal(w.requestAdminOverdue({...base,status:'pending',requested_at:null}),false,'unscheduled request is not overdue');assert.equal(w.requestAdminOverdue(rows.find(r=>r.id==='late')),true);assert.equal(w.requestAdminOverdue(rows.find(r=>r.id==='rescheduled')),false,'new agreed time used');assert.equal(w.requestAdminOverdue(rows.find(r=>r.id==='received')),false,'receipt ends lateness');

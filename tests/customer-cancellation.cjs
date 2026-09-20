@@ -2,7 +2,7 @@ const {JSDOM}=require('jsdom');
 const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,'');
-const scripts=['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js','kitchen-overview.js','food-requests.js','navigation-state.js'];
+const scripts=require('../scripts/runtime-scripts.cjs').runtimeScripts();
 const tokens=['a'.repeat(64),'b'.repeat(64),'c'.repeat(64)];
 const requests=new Map(),offline=new Set(),windows=[],errors=[];
 let cancelFails=false;

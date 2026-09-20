@@ -1,32 +1,374 @@
-const SUPABASE_URL='https://qgblrockjswicegfldzm.supabase.co';const SUPABASE_KEY='sb_publishable__by9VCo0-kgc7x5msoXB4A_P5r-UoQQ';const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),loginView=document.getElementById('adminLogin'),dashboard=document.getElementById('adminDashboard'),list=document.getElementById('adminChefList'),loginError=document.getElementById('adminLoginError'),toast=document.getElementById('toast');function e(v){return String(v??'').replace(/[&<>'\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[ch]))}function safeUrl(v){try{const u=new URL(String(v));return u.protocol==='https:'?u.href:''}catch{return''}}function prefix(g){return g==='m'?'عمّي':'أمّي'}function toastMsg(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),3000)}function membership(v){return v==='honorary'?'شرفية':v==='paid'?'مدفوعة':'غير محددة'}function city(c){return c.city_label||c.city||'—'}function date(v){if(!v)return'—';return new Intl.DateTimeFormat('ar-MA',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}function hasKitchen(c){return Array.isArray(c.dishes)&&c.dishes.length>0}function isPublic(c){return c.status==='active'&&c.membership_status==='active'&&['honorary','paid'].includes(c.membership_type)}function state(c){if(c.status==='rejected')return['مرفوض / موقوف','rejected'];if(isPublic(c))return['منشور للزبائن','active'];if(c.correction_request&&!c.correction_submitted_at)return['تصحيح مطلوب','review'];if(c.correction_request&&c.correction_submitted_at)return['أرسل تصحيحًا · يحتاج مراجعة','review'];if(hasKitchen(c))return['ملف مكتمل · يحتاج مراجعة','review'];return['منتسبة جديدة · تبني مطبخها','waiting']}
-async function verify(){const{data:{session}}=await db.auth.getSession();if(!session){showLogin();return}const{data,error}=await db.rpc('admin_list_chefs');if(error){await db.auth.signOut();showLogin('هذا الحساب غير مخول للإدارة.');return}loginView.hidden=true;dashboard.hidden=false;document.getElementById('adminIdentity').textContent=session.user.email||'';render(data||[])}function showLogin(m=''){loginView.hidden=false;dashboard.hidden=true;loginError.textContent=m}async function load(){list.innerHTML='<div class="empty-state loading">جاري تحميل الملفات...</div>';const{data,error}=await db.rpc('admin_list_chefs');if(error){toastMsg('تعذر تحميل الملفات');return}render(data||[])}
-function dishesHtml(c){if(!hasKitchen(c))return'';return `<div class="admin-bio"><b>الأطباق</b><div class="admin-dish-grid">${c.dishes.map(d=>{const u=safeUrl(d.image_url);return `<div class="admin-dish-item">${u?`<img src="${e(u)}" alt="${e(d.name)}" loading="lazy">`:'<div class="admin-dish-placeholder">بدون صورة</div>'}<span>${e(d.name)}${d.price?` · ${adminMoney(d.price)}`:''}</span></div>`}).join('')}</div></div>`}
-function phoneVerificationHtml(c){return `<div class="admin-workflow-box"><b>التحقق الإداري من الهاتف:</b> ${c.phone_verified?`تم التحقق${c.phone_verified_at?` · ${e(date(c.phone_verified_at))}`:''}`:'لم يتم التحقق بعد'}${!c.phone_verified?'<div class="admin-actions"><button class="admin-secondary" data-verify-phone>تم التحقق من الهاتف</button></div>':''}</div>`}
-function actions(c){if(c.status==='rejected')return'';if(!hasKitchen(c))return'<div class="admin-workflow-box">المطبخ مفتوح، ولم تُضف وجبات بعد.</div><div class="admin-actions"><button class="admin-danger" data-reject>رفض / إيقاف الانخراط</button></div>';const memberBtns='';if(isPublic(c))return`<div class="admin-actions">${memberBtns}<button class="admin-danger" data-suspend>تعليق وإخفاء</button></div>`;return`<div class="admin-workflow-box"><b>جاهز للمداولة:</b> راجع بيانات المطبخ ثم فعّله.</div><div class="admin-actions">${memberBtns}<button class="primary" data-publish>تفعيل المطبخ</button><button class="admin-secondary" data-correction>طلب تصحيح</button><button class="admin-danger" data-reject>رفض / إيقاف</button></div>`}
-function render(rows){document.getElementById('pendingCount').textContent=rows.filter(c=>!isPublic(c)&&c.status!=='rejected').length;document.getElementById('activeCount').textContent=rows.filter(isPublic).length;if(!rows.length){list.innerHTML='<div class="empty-state"><strong>لا توجد ملفات بعد.</strong></div>';return}list.innerHTML=rows.slice().sort((a,b)=>Number(isPublic(a))-Number(isPublic(b))).map(c=>{const[s,cls]=state(c);return`<article class="admin-chef-card" data-id="${c.id}"><div class="admin-chef-top"><div><h3>${prefix(c.gender)} ${e(c.name)}</h3><p>${e(c.area||'الحي غير مسجل')}</p></div><span class="admin-badge ${cls}">${s}</span></div><div class="admin-details admin-details-grid"><span><b>الهاتف</b>${e(c.phone||'—')}</span><span><b>المدينة</b>${e(city(c))}</span><span><b>بدأت</b>${e(date(c.created_at))}</span><span><b>الظهور</b>${isPublic(c)?'منشور':'مخفي'}</span></div><details><summary>بيانات التحقق</summary>${phoneVerificationHtml(c)}</details>${c.correction_request?`<div class="admin-workflow-box"><b>طلب التصحيح:</b> ${e(c.correction_request)}<br><small>${c.correction_submitted_at?'أرسلت الطاهية تعديلات بعد الطلب.':'بانتظار تعديل الطاهية.'}</small></div>`:''}${c.bio?`<div class="admin-bio"><b>عن المطبخ</b><p>${e(c.bio)}</p></div>`:''}${dishesHtml(c)}${actions(c)}</article>`}).join('');list.querySelectorAll('[data-verify-phone]').forEach(b=>b.onclick=()=>verifyPhone(b.closest('[data-id]').dataset.id,b));list.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>reject(b.closest('[data-id]').dataset.id,b));list.querySelectorAll('[data-membership]').forEach(b=>b.onclick=()=>setMembership(b.closest('[data-id]').dataset.id,b.dataset.membership,b));list.querySelectorAll('[data-publish]').forEach(b=>b.onclick=()=>publish(b.closest('[data-id]').dataset.id,b));list.querySelectorAll('[data-suspend]').forEach(b=>b.onclick=()=>suspend(b.closest('[data-id]').dataset.id,b));list.querySelectorAll('[data-correction]').forEach(b=>b.onclick=()=>requestCorrection(b.closest('[data-id]').dataset.id,b))}
-async function current(id){const{data}=await db.rpc('admin_list_chefs');return(data||[]).find(c=>String(c.id)===String(id))}async function verifyPhone(id,b){if(!confirm('هل اتصلت بالرقم المسجل وتأكدت أن صاحبة الحساب تتحكم فيه؟'))return;b.disabled=true;const{error}=await db.rpc('verify_chef_phone',{chef_id:id});b.disabled=false;if(error){toastMsg('تعذر تسجيل التحقق من الهاتف');return}toastMsg('تم تسجيل التحقق من الهاتف');load()}async function setMembership(id,type,b){b.disabled=true;const{error}=await db.rpc('set_chef_membership',{chef_id:id,new_membership_type:type});b.disabled=false;if(error){toastMsg('تعذر تغيير العضوية');return}toastMsg(type==='honorary'?'تم تعيين العضوية الشرفية':'تم تعيين العضوية المدفوعة');load()}async function publish(id,b){const c=await current(id);if(!c||!hasKitchen(c)){toastMsg('المطبخ غير مكتمل');return}let verified=c.phone_verified;if(!verified){verified=confirm('هل تحققت من ملكية الهاتف وراجعت بيانات المطبخ؟');if(!verified)return;}b.disabled=true;try{const{error}=await db.rpc('admin_activate_kitchen',{p_chef_id:id,p_phone_confirmed:verified});if(error)throw error;toastMsg('تم اعتماد المطبخ ونشره');await load();}catch{toastMsg('تعذر التفعيل. تحقق من الهاتف واكتمال المطبخ.');}finally{b.disabled=false;}}async function requestCorrection(id,b){const message=prompt('ما الذي يجب على الطاهية تصحيحه؟');if(message===null||!message.trim())return;b.disabled=true;const{error}=await db.rpc('request_chef_correction',{chef_id:id,message:message.trim()});b.disabled=false;if(error){toastMsg('تعذر تسجيل طلب التصحيح');return}toastMsg('تم تسجيل طلب التصحيح داخل المنصة');load()}async function suspend(id,b){if(!confirm('تعليق المطبخ وإخفاؤه عن الزبائن؟'))return;b.disabled=true;const{error}=await db.rpc('suspend_chef',{chef_id:id});b.disabled=false;if(error){toastMsg('تعذر التعليق');return}toastMsg('تم تعليق المطبخ');load()}async function reject(id,b){const reason=prompt('سبب الرفض أو الإيقاف:');if(reason===null||!reason.trim())return;b.disabled=true;const{error}=await db.rpc('reject_chef',{chef_id:id,reason:reason.trim()});b.disabled=false;if(error){toastMsg('تعذر تنفيذ القرار');return}toastMsg('تم إيقاف الانخراط');load()}
-document.getElementById('adminLoginBtn').onclick=async()=>{const email=document.getElementById('adminEmail').value.trim(),password=document.getElementById('adminPassword').value;if(!email||!password){loginError.textContent='أدخل البريد وكلمة المرور.';return}const b=document.getElementById('adminLoginBtn');b.disabled=true;const{error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error){loginError.textContent='بيانات الدخول غير صحيحة.';return}verify()};document.getElementById('adminLogoutBtn').onclick=async()=>{await db.auth.signOut();showLogin()};document.getElementById('adminRefreshBtn').onclick=load;verify();
-function applyAdminView(view=document.querySelector('.admin-tab.active')?.dataset.adminView||'all'){
- const requests=document.getElementById('adminRequestsSection'),legacy=document.getElementById('adminOrdersSection'),chefs=document.getElementById('adminChefSection'),stats=document.getElementById('adminStatsSection');
- if(requests)requests.hidden=!['all','urgent','complaints'].includes(view);
- if(legacy)legacy.hidden=!['all','urgent','complaints'].includes(view);
- if(chefs)chefs.hidden=!['all','kitchens'].includes(view);
- if(stats)stats.hidden=view!=='stats';
- const content=document.getElementById('requestAdmin');
- content?.querySelectorAll('.admin-request-card').forEach(card=>{card.hidden=view==='urgent'&&!card.classList.contains('admin-priority-urgent')||view==='complaints'&&!card.classList.contains('admin-open-complaint');});
- document.getElementById('adminOrdersList')?.querySelectorAll('.admin-legacy-order-card').forEach(card=>{card.hidden=view==='urgent'&&!card.classList.contains('admin-priority-urgent')||view==='complaints'&&!card.classList.contains('admin-open-complaint');});
+const SUPABASE_URL = "https://qgblrockjswicegfldzm.supabase.co";
+const SUPABASE_KEY = "sb_publishable__by9VCo0-kgc7x5msoXB4A_P5r-UoQQ";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY),
+  loginView = document.getElementById("adminLogin"),
+  dashboard = document.getElementById("adminDashboard"),
+  list = document.getElementById("adminChefList"),
+  loginError = document.getElementById("adminLoginError"),
+  toast = document.getElementById("toast");
+function e(v) {
+  return String(v ?? "").replace(
+    /[&<>'\"]/g,
+    (ch) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '\"': "&quot;",
+      })[ch],
+  );
 }
-window.applyAdminView=applyAdminView;
-window.setAdminAttentionCounts=function(kind,counts){
- const state=window.adminAttentionCounts||(window.adminAttentionCounts={});state[kind]=counts||{};
- const total=(key)=>Object.values(state).reduce((sum,item)=>sum+Number(item[key]||0),0);
- const urgent=document.getElementById('urgentCount'),complaints=document.getElementById('complaintCount');
- if(urgent)urgent.textContent=total('urgent');if(complaints)complaints.textContent=total('complaints');
+function safeUrl(v) {
+  try {
+    const u = new URL(String(v));
+    return u.protocol === "https:" ? u.href : "";
+  } catch {
+    return "";
+  }
+}
+function prefix(g) {
+  return g === "m" ? "عمّي" : "أمّي";
+}
+function toastMsg(t) {
+  toast.textContent = t;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 3000);
+}
+function membership(v) {
+  return v === "honorary" ? "شرفية" : v === "paid" ? "مدفوعة" : "غير محددة";
+}
+function city(c) {
+  return c.city_label || c.city || "—";
+}
+function date(v) {
+  if (!v) return "—";
+  return new Intl.DateTimeFormat("ar-MA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(v));
+}
+function hasKitchen(c) {
+  return Array.isArray(c.dishes) && c.dishes.length > 0;
+}
+function isPublic(c) {
+  return (
+    c.status === "active" &&
+    c.membership_status === "active" &&
+    ["honorary", "paid"].includes(c.membership_type)
+  );
+}
+function state(c) {
+  if (c.status === "rejected") return ["مرفوض / موقوف", "rejected"];
+  if (isPublic(c)) return ["منشور للزبائن", "active"];
+  if (c.correction_request && !c.correction_submitted_at)
+    return ["تصحيح مطلوب", "review"];
+  if (c.correction_request && c.correction_submitted_at)
+    return ["أرسل تصحيحًا · يحتاج مراجعة", "review"];
+  if (hasKitchen(c)) return ["ملف مكتمل · يحتاج مراجعة", "review"];
+  return ["منتسبة جديدة · تبني مطبخها", "waiting"];
+}
+async function verify() {
+  const {
+    data: { session },
+  } = await db.auth.getSession();
+  if (!session) {
+    showLogin();
+    return;
+  }
+  const { data, error } = await db.rpc("admin_list_chefs");
+  if (error) {
+    await db.auth.signOut();
+    showLogin("هذا الحساب غير مخول للإدارة.");
+    return;
+  }
+  loginView.hidden = true;
+  dashboard.hidden = false;
+  document.getElementById("adminIdentity").textContent =
+    session.user.email || "";
+  render(data || []);
+  await loadAdminOrders();
+}
+function showLogin(m = "") {
+  loginView.hidden = false;
+  dashboard.hidden = true;
+  loginError.textContent = m;
+}
+async function load() {
+  list.innerHTML =
+    '<div class="empty-state loading">جاري تحميل الملفات...</div>';
+  const { data, error } = await db.rpc("admin_list_chefs");
+  if (error) {
+    toastMsg("تعذر تحميل الملفات");
+    return;
+  }
+  render(data || []);
+  await loadAdminOrders();
+}
+function dishesHtml(c) {
+  if (!hasKitchen(c)) return "";
+  return `<div class="admin-bio"><b>الأطباق</b><div class="admin-dish-grid">${c.dishes
+    .map((d) => {
+      const u = safeUrl(d.image_url);
+      return `<div class="admin-dish-item">${u ? `<img src="${e(u)}" alt="${e(d.name)}" loading="lazy">` : '<div class="admin-dish-placeholder">بدون صورة</div>'}<span>${e(d.name)}${d.price ? ` · ${adminMoney(d.price)}` : ""}</span></div>`;
+    })
+    .join("")}</div></div>`;
+}
+function phoneVerificationHtml(c) {
+  return `<div class="admin-workflow-box"><b>التحقق الإداري من الهاتف:</b> ${c.phone_verified ? `تم التحقق${c.phone_verified_at ? ` · ${e(date(c.phone_verified_at))}` : ""}` : "لم يتم التحقق بعد"}${!c.phone_verified ? '<div class="admin-actions"><button class="admin-secondary" data-verify-phone>تم التحقق من الهاتف</button></div>' : ""}</div>`;
+}
+function actions(c) {
+  if (c.status === "rejected") return "";
+  if (!hasKitchen(c))
+    return '<div class="admin-workflow-box">المطبخ مفتوح، ولم تُضف وجبات بعد.</div><div class="admin-actions"><button class="admin-danger" data-reject>رفض / إيقاف الانخراط</button></div>';
+  const memberBtns = "";
+  if (isPublic(c))
+    return `<div class="admin-actions">${memberBtns}<button class="admin-danger" data-suspend>تعليق وإخفاء</button></div>`;
+  return `<div class="admin-workflow-box"><b>جاهز للمداولة:</b> راجع بيانات المطبخ ثم فعّله.</div><div class="admin-actions">${memberBtns}<button class="primary" data-publish>تفعيل المطبخ</button><button class="admin-secondary" data-correction>طلب تصحيح</button><button class="admin-danger" data-reject>رفض / إيقاف</button></div>`;
+}
+function render(rows) {
+  document.getElementById("pendingCount").textContent = rows.filter(
+    (c) => !isPublic(c) && c.status !== "rejected",
+  ).length;
+  document.getElementById("activeCount").textContent =
+    rows.filter(isPublic).length;
+  if (!rows.length) {
+    list.innerHTML =
+      '<div class="empty-state"><strong>لا توجد ملفات بعد.</strong></div>';
+    return;
+  }
+  list.innerHTML = rows
+    .slice()
+    .sort((a, b) => Number(isPublic(a)) - Number(isPublic(b)))
+    .map((c) => {
+      const [s, cls] = state(c);
+      return `<article class="admin-chef-card" data-id="${c.id}"><div class="admin-chef-top"><div><h3>${prefix(c.gender)} ${e(c.name)}</h3><p>${e(c.area || "الحي غير مسجل")}</p></div><span class="admin-badge ${cls}">${s}</span></div><div class="admin-details admin-details-grid"><span><b>الهاتف</b>${e(c.phone || "—")}</span><span><b>المدينة</b>${e(city(c))}</span><span><b>بدأت</b>${e(date(c.created_at))}</span><span><b>الظهور</b>${isPublic(c) ? "منشور" : "مخفي"}</span></div><details><summary>بيانات التحقق</summary>${phoneVerificationHtml(c)}</details>${c.correction_request ? `<div class="admin-workflow-box"><b>طلب التصحيح:</b> ${e(c.correction_request)}<br><small>${c.correction_submitted_at ? "أرسلت الطاهية تعديلات بعد الطلب." : "بانتظار تعديل الطاهية."}</small></div>` : ""}${c.bio ? `<div class="admin-bio"><b>عن المطبخ</b><p>${e(c.bio)}</p></div>` : ""}${dishesHtml(c)}${actions(c)}</article>`;
+    })
+    .join("");
+  list
+    .querySelectorAll("[data-verify-phone]")
+    .forEach(
+      (b) =>
+        (b.onclick = () => verifyPhone(b.closest("[data-id]").dataset.id, b)),
+    );
+  list
+    .querySelectorAll("[data-reject]")
+    .forEach(
+      (b) => (b.onclick = () => reject(b.closest("[data-id]").dataset.id, b)),
+    );
+  list
+    .querySelectorAll("[data-membership]")
+    .forEach(
+      (b) =>
+        (b.onclick = () =>
+          setMembership(
+            b.closest("[data-id]").dataset.id,
+            b.dataset.membership,
+            b,
+          )),
+    );
+  list
+    .querySelectorAll("[data-publish]")
+    .forEach(
+      (b) => (b.onclick = () => publish(b.closest("[data-id]").dataset.id, b)),
+    );
+  list
+    .querySelectorAll("[data-suspend]")
+    .forEach(
+      (b) => (b.onclick = () => suspend(b.closest("[data-id]").dataset.id, b)),
+    );
+  list
+    .querySelectorAll("[data-correction]")
+    .forEach(
+      (b) =>
+        (b.onclick = () =>
+          requestCorrection(b.closest("[data-id]").dataset.id, b)),
+    );
+}
+async function current(id) {
+  const { data } = await db.rpc("admin_list_chefs");
+  return (data || []).find((c) => String(c.id) === String(id));
+}
+async function verifyPhone(id, b) {
+  if (!confirm("هل اتصلت بالرقم المسجل وتأكدت أن صاحبة الحساب تتحكم فيه؟"))
+    return;
+  b.disabled = true;
+  const { error } = await db.rpc("verify_chef_phone", { chef_id: id });
+  b.disabled = false;
+  if (error) {
+    toastMsg("تعذر تسجيل التحقق من الهاتف");
+    return;
+  }
+  toastMsg("تم تسجيل التحقق من الهاتف");
+  load();
+}
+async function setMembership(id, type, b) {
+  b.disabled = true;
+  const { error } = await db.rpc("set_chef_membership", {
+    chef_id: id,
+    new_membership_type: type,
+  });
+  b.disabled = false;
+  if (error) {
+    toastMsg("تعذر تغيير العضوية");
+    return;
+  }
+  toastMsg(
+    type === "honorary"
+      ? "تم تعيين العضوية الشرفية"
+      : "تم تعيين العضوية المدفوعة",
+  );
+  load();
+}
+async function publish(id, b) {
+  const c = await current(id);
+  if (!c || !hasKitchen(c)) {
+    toastMsg("المطبخ غير مكتمل");
+    return;
+  }
+  let verified = c.phone_verified;
+  if (!verified) {
+    verified = confirm("هل تحققت من ملكية الهاتف وراجعت بيانات المطبخ؟");
+    if (!verified) return;
+  }
+  b.disabled = true;
+  try {
+    const { error } = await db.rpc("admin_activate_kitchen", {
+      p_chef_id: id,
+      p_phone_confirmed: verified,
+    });
+    if (error) throw error;
+    toastMsg("تم اعتماد المطبخ ونشره");
+    await load();
+  } catch {
+    toastMsg("تعذر التفعيل. تحقق من الهاتف واكتمال المطبخ.");
+  } finally {
+    b.disabled = false;
+  }
+}
+async function requestCorrection(id, b) {
+  const message = prompt("ما الذي يجب على الطاهية تصحيحه؟");
+  if (message === null || !message.trim()) return;
+  b.disabled = true;
+  const { error } = await db.rpc("request_chef_correction", {
+    chef_id: id,
+    message: message.trim(),
+  });
+  b.disabled = false;
+  if (error) {
+    toastMsg("تعذر تسجيل طلب التصحيح");
+    return;
+  }
+  toastMsg("تم تسجيل طلب التصحيح داخل المنصة");
+  load();
+}
+async function suspend(id, b) {
+  if (!confirm("تعليق المطبخ وإخفاؤه عن الزبائن؟")) return;
+  b.disabled = true;
+  const { error } = await db.rpc("suspend_chef", { chef_id: id });
+  b.disabled = false;
+  if (error) {
+    toastMsg("تعذر التعليق");
+    return;
+  }
+  toastMsg("تم تعليق المطبخ");
+  load();
+}
+async function reject(id, b) {
+  const reason = prompt("سبب الرفض أو الإيقاف:");
+  if (reason === null || !reason.trim()) return;
+  b.disabled = true;
+  const { error } = await db.rpc("reject_chef", {
+    chef_id: id,
+    reason: reason.trim(),
+  });
+  b.disabled = false;
+  if (error) {
+    toastMsg("تعذر تنفيذ القرار");
+    return;
+  }
+  toastMsg("تم إيقاف الانخراط");
+  load();
+}
+document.getElementById("adminLoginBtn").onclick = async () => {
+  const email = document.getElementById("adminEmail").value.trim(),
+    password = document.getElementById("adminPassword").value;
+  if (!email || !password) {
+    loginError.textContent = "أدخل البريد وكلمة المرور.";
+    return;
+  }
+  const b = document.getElementById("adminLoginBtn");
+  b.disabled = true;
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  b.disabled = false;
+  if (error) {
+    loginError.textContent = "بيانات الدخول غير صحيحة.";
+    return;
+  }
+  verify();
 };
-function selectAdminView(tab){
- const view=tab.dataset.adminView;
- document.querySelectorAll('.admin-tab').forEach(x=>x.classList.toggle('active',x.dataset.adminView===view));
- applyAdminView(view);
+document.getElementById("adminLogoutBtn").onclick = async () => {
+  await db.auth.signOut();
+  showLogin();
+};
+document.getElementById("adminRefreshBtn").onclick = load;
+window.addEventListener(
+  "DOMContentLoaded",
+  () => verify().catch(() => showLogin("تعذر الاتصال. حاول مجددًا.")),
+  { once: true },
+);
+function applyAdminView(
+  view = document.querySelector(".admin-tab.active")?.dataset.adminView ||
+    "all",
+) {
+  const requests = document.getElementById("adminRequestsSection"),
+    legacy = document.getElementById("adminOrdersSection"),
+    chefs = document.getElementById("adminChefSection"),
+    stats = document.getElementById("adminStatsSection");
+  if (requests)
+    requests.hidden = !["all", "urgent", "complaints"].includes(view);
+  if (legacy) legacy.hidden = !["all", "urgent", "complaints"].includes(view);
+  if (chefs) chefs.hidden = !["all", "kitchens"].includes(view);
+  if (stats) stats.hidden = view !== "stats";
+  const content = document.getElementById("requestAdmin");
+  content?.querySelectorAll(".admin-request-card").forEach((card) => {
+    card.hidden =
+      (view === "urgent" &&
+        !card.classList.contains("admin-priority-urgent")) ||
+      (view === "complaints" &&
+        !card.classList.contains("admin-open-complaint"));
+  });
+  document
+    .getElementById("adminOrdersList")
+    ?.querySelectorAll(".admin-legacy-order-card")
+    .forEach((card) => {
+      card.hidden =
+        (view === "urgent" &&
+          !card.classList.contains("admin-priority-urgent")) ||
+        (view === "complaints" &&
+          !card.classList.contains("admin-open-complaint"));
+    });
 }
-document.querySelectorAll('[data-admin-view]').forEach(tab=>tab.addEventListener('click',()=>selectAdminView(tab)));
-applyAdminView('all');
+
+function setAdminAttentionCounts(kind, counts) {
+  const state =
+    window.adminAttentionCounts || (window.adminAttentionCounts = {});
+  state[kind] = counts || {};
+  const total = (key) =>
+    Object.values(state).reduce((sum, item) => sum + Number(item[key] || 0), 0);
+  const urgent = document.getElementById("urgentCount"),
+    complaints = document.getElementById("complaintCount");
+  if (urgent) urgent.textContent = total("urgent");
+  if (complaints) complaints.textContent = total("complaints");
+}
+function selectAdminView(tab) {
+  const view = tab.dataset.adminView;
+  document
+    .querySelectorAll(".admin-tab")
+    .forEach((x) => x.classList.toggle("active", x.dataset.adminView === view));
+  applyAdminView(view);
+}
+document
+  .querySelectorAll("[data-admin-view]")
+  .forEach((tab) => tab.addEventListener("click", () => selectAdminView(tab)));
+applyAdminView("all");

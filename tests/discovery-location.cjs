@@ -1,7 +1,7 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,'');
-const scripts=['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js','kitchen-overview.js','food-requests.js','navigation-state.js'];
+const scripts=require('../scripts/runtime-scripts.cjs').runtimeScripts();
 const kitchens=[{id:'casa',name:'كريم',gender:'m',city:'casablanca',area:'المعاريف',status:'active',dishes:[]},{id:'rabat',name:'اختبار الرباط',city:'rabat',area:'أكدال',status:'active',dishes:[]},{id:'missing',name:'بلا موقع',city:'casablanca',area:'حي آخر',status:'active',dishes:[]}];
 const windows=[],errors=[],calls=[];let locations=[],ownerLocation=null,locationError=false,gpsCalls=0,gpsFailure=false;
 const tick=()=>new Promise(r=>setTimeout(r,30));

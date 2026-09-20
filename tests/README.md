@@ -16,15 +16,33 @@ Use the latest feature branch and `PRODUCT_DECISIONS.md` for product behavior. H
 - `request-admin.cjs`: current request follow-up and complaint controls, overdue/received classification, actor-specific agreement display.
 
 ```sh
-npm install --prefix /tmp/ommi-tests --no-audit --no-fund jsdom@26.1.0
-NODE_PATH=/tmp/ommi-tests/node_modules node tests/customer-led-ui.cjs
-NODE_PATH=/tmp/ommi-tests/node_modules node tests/navigation-state.cjs
-NODE_PATH=/tmp/ommi-tests/node_modules node tests/request-admin.cjs
-python scripts/build-static.py
+npm ci --ignore-scripts --no-audit --no-fund
+npm test
+npm run build
 ```
+
+`npm test` runs eleven suites and fails on the first failing or timed-out suite. The build runs the same gate before writing `dist/`. Node.js 22+ and Python 3 are required; no test dependency is shipped to visitors.
+
+Additional stabilization checks:
+
+- `architecture.cjs`: parses both real page script lists, rejects duplicate global declarations/function replacements and multiple startups; includes deliberately broken examples to prove the guard fails.
+- `order-rules.cjs`: shared optional time, revised deadlines, receipt, legacy expiry and integer/cent prices.
+- `admin-ui.cjs`: loads all actual admin scripts; tab filtering, complaint handling, one request per startup, urgency deduplication, refresh failure and sign-out.
+- `async-navigation.cjs`: a delayed response cannot reopen an abandoned page or replace the latest selected request; reminders cause no duplicate fetch.
+- `admin-followup.cjs` and `admin-subscriptions.cjs`: historical order follow-up and free kitchen activation remain supported. The latter tests the absence of billing requirements.
+
+The runtime test list comes from `index.html` / `admin.html`, via `scripts/runtime-scripts.cjs`, so code loading cannot silently diverge between tests and the website.
+
 
 ## Phone acceptance remains required
 
 With an authorized test kitchen and customer, test request → accept → contact → agree/start preparation → ready → delivered → customer receipt → optional rating. Also test rejection, late request, reopening/refresh and admin complaint follow-up. No automatic messages are sent by these tests. Contact buttons open phone/WhatsApp; they do not initiate calls. Polling while visible is not background notification.
 
 Static build and preview success are distinct from deployment to the user's Cloudflare URL. Record the tested commit and destination; never infer publication from a GitHub commit alone.
+
+## Stabilization verification — 20 September 2026
+
+- All eleven JavaScript/DOM/architecture suites passed on the refactored code.
+- `direct-contact.sql`, `optional-request-time.sql` and `kitchen-map-consent.sql` passed against the linked Supabase project, each as one transaction with rollback. No production fixture records were retained and no schema was changed by this refactor.
+- Public order creation now has one implementation. Tracking, navigation, dashboard and admin loading no longer replace earlier global functions.
+- Actual publication and phone acceptance must still be recorded separately; the results above do not claim either.

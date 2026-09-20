@@ -1,6 +1,6 @@
 const {JSDOM}=require('jsdom');const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,'');
-const scripts=['app.js','dish-images.js','meal-orders.js','nearby.js','kitchen-settings.js','simple-launch.js','kitchen-overview.js','food-requests.js','navigation-state.js'];
+const scripts=require('../scripts/runtime-scripts.cjs').runtimeScripts();
 const chef={id:'chef',name:'كريم',gender:'m',area:'المعاريف',dishes:[],status:'active'};
 const offer={id:'dish',chef_id:'chef',dish_name:'كسكس',price:40,reference_price:40,active:true,delivery_areas:[]};
 const token='a'.repeat(64),request={id:'r',request_v2:true,status:'pending',dish_name:'كسكس',people:2,order_ref:'OF-test',requested_at:'2030-01-01T12:00Z',chef_phone:'0600000001'};
