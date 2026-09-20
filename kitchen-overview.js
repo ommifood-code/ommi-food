@@ -5,15 +5,17 @@ mountMealDashboard=function(c){
  let actions=document.getElementById('mealActions');if(!actions){actions=document.createElement('div');actions.id='mealActions';box.append(actions);}
  actions.className='kitchen-toolbar';actions.replaceChildren(mealAction('＋ إضافة وجبة',()=>openMealOfferForm(c)),mealAction('بيانات مطبخي',()=>openKitchenSettings(c)));actions.firstChild.className='primary';
  let overview=document.getElementById('kitchenOverview');if(!overview){overview=document.createElement('div');overview.id='kitchenOverview';box.append(overview);}
- overview.innerHTML='<div id="kitchenPendingSummary" aria-live="polite"></div><section class="kitchen-section"><h2>أطباق مطبخي</h2><div id="kitchenDishCards" class="kitchen-dish-grid"><p>جاري تحميل أطباقك…</p></div></section><section class="kitchen-section kitchen-orders" id="kitchenOrdersSection"><h2>طلبات مطبخي</h2><div id="kitchenOrderCards"><p>جاري تحميل الطلبات…</p></div></section>';
+ overview.innerHTML='<div id="kitchenPendingSummary" aria-live="polite"></div><div id="kitchenMapSummary" role="status"></div><section class="kitchen-section"><h2>أطباق مطبخي</h2><div id="kitchenDishCards" class="kitchen-dish-grid"><p>جاري تحميل أطباقك…</p></div></section><section class="kitchen-section kitchen-orders" id="kitchenOrdersSection"><h2>طلبات مطبخي</h2><div id="kitchenOrderCards"><p>جاري تحميل الطلبات…</p></div></section>';
  const refresh=()=>loadKitchenOverview(c);const button=mealAction('تحديث الأطباق والطلبات',refresh);button.classList.add('overview-refresh');overview.append(button);refresh();
 };
 async function loadKitchenOverview(c){
  const version=++kitchenOverviewVersion,token=chefSessionToken;
- const results=await Promise.allSettled([mealRpc('chef_meal_offers',{p_session_token:token}),getKitchenOrders(token)]);
+ const results=await Promise.allSettled([mealRpc('chef_meal_offers',{p_session_token:token}),getKitchenOrders(token),mealRpc('chef_location',{p_session_token:token})]);
  if(version!==kitchenOverviewVersion||token!==chefSessionToken)return;
  const dishes=document.getElementById('kitchenDishCards'),ordersBox=document.getElementById('kitchenOrderCards'),summary=document.getElementById('kitchenPendingSummary');if(!dishes||!ordersBox)return;
  const refresh=()=>loadKitchenOverview(c);dishes.replaceChildren();ordersBox.replaceChildren();summary.replaceChildren();
+ const mapSummary=document.getElementById('kitchenMapSummary');
+ if(mapSummary){mapSummary.replaceChildren();const location=results[2];if(location.status==='rejected')mapSummary.textContent='تعذر التحقق من ظهور مطبخك على الخريطة. يمكنك المحاولة من «بيانات مطبخي».';else if(location.value?.public_on_map)mapSummary.textContent='موقع مطبخك منشور على الخريطة.';else{const p=location.value;mapSummary.textContent='مطبخك ظاهر في القائمة، لكنه غير ظاهر على الخريطة. ';mapSummary.append(mealAction(p?'نشر موقعي على الخريطة':'تحديد موقع مطبخي',()=>pickLocation(true,p?[Number(p.lat),Number(p.lng)]:null,saveKitchenPoint)));}}
  if(results[0].status==='rejected'){dishes.textContent='تعذر تحميل الأطباق. اضغط تحديث للمحاولة مجددًا.';}else{
  const offers=results[0].value||[];
  if(!offers.length)dishes.innerHTML='<p class="overview-empty">لم تضف طبقًا بعد. ابدأ بزر «إضافة وجبة» أعلاه.</p>';

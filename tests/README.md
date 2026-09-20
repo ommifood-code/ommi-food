@@ -4,6 +4,10 @@ Use the latest feature branch and `PRODUCT_DECISIONS.md` for product behavior. H
 
 ## Current checks
 
+- `discovery-location.cjs`: no assumed customer city or GPS request; city filters, real-source distance labels, GPS refusal, point selection and refresh, published pins, stale marker clearing, network errors, owner consent gate and publication. Leaflet is a test double; backend visibility is checked separately.
+- `kitchen-map-consent.sql`: one BEGIN/ROLLBACK call; private coordinates, explicit publication, revocation, removal and invalid sessions. Does not change a real kitchen location.
+- `customer-cancellation.cjs`: cancellation removes customer tracking, preserves other requests and survives refresh/deep links; failed cancellation and unavailable networks never erase another request.
+
 - `optional-request-time.sql`: one BEGIN/ROLLBACK call; omitted, empty and null appointment values remain NULL through acceptance/preparation, and an explicit appointment beyond sixty days remains intact. UI/navigation checks require no selected dish on entry or restore.
 
 - `direct-contact.sql`: run **the whole file in one SQL call** after the consistency migration. BEGIN/ROLLBACK fixtures verify request idempotency, acceptance, phone agreement actor, preparation, ready/delivered, distinct receipt, rating gates, cancellation, overdue refusal, rescheduling old requests, capability isolation and private tables. No fixtures persist.

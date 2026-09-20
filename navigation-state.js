@@ -16,6 +16,7 @@ function navigationSnapshot(){
  if(id==='orderModal')state.chefId=activeChef?.id;
  if(id==='mealOfferEditor')state.offerId=screen.dataset.offerId||null;
  if(id==='customerMealTracking')state.token=requestTrackingToken||mealTrackingToken;
+ if(id==='chefs'){state.searchPoint=nearbyPoint;state.searchPointSource=nearbyPointSource;state.mapOpen=!document.getElementById('nearMapWrap').hidden;}
  if(id==='locationPicker'){state.locationOwner=screen.dataset.locationOwner==='true';state.point=JSON.parse(screen.dataset.point||'null');if(state.locationOwner)state.owner=currentChefId;}
  const modal=document.querySelector('.modal.open');
  if(modal&&['joinModal','chefLoginModal'].includes(modal.id))state.modal={id:modal.id,fields:navigationFields(modal)};
@@ -31,6 +32,13 @@ function forgetOrderNavigation(token){
  navigationTrail=navigationTrail.filter(state=>!cancelled(state));
  if(cancelled(navigationCurrent))navigationCurrent=null;
  try{const saved=JSON.parse(sessionStorage.getItem(OMMI_NAV_STATE_KEY)||'null');if(saved){if(cancelled(saved.current))saved.current={screen:'home'};saved.trail=(saved.trail||[]).filter(state=>!cancelled(state));sessionStorage.setItem(OMMI_NAV_STATE_KEY,JSON.stringify(saved));}}catch{}
+}
+function updateNearbyNavigation(){
+ if(document.querySelector('#locationPicker.active')){
+  const previous=navigationTrail.findLast(state=>state.screen==='chefs');
+  if(previous){previous.searchPoint=nearbyPoint;previous.searchPointSource=nearbyPointSource;previous.fields=navigationFields(document.getElementById('chefs'));}
+ }
+ saveNavigationState();
 }
 const navigationStateShowScreen=showScreen;
 showScreen=function(id){
@@ -54,6 +62,7 @@ function restoreNavigationFields(state){
    else field.value=state.screen==='orderModal'&&field.name==='requested_at'?requestDraftTime(entry.value):entry.value;
   }
  }
+ if(state.screen==='locationPicker')document.getElementById('publicMapConsent')?.dispatchEvent(new Event('change'));
  for(const select of screen.querySelectorAll('select'))select.dispatchEvent(new Event('change',{bubbles:true}));
  if(state.screen==='orderModal'){
   document.querySelector('#mealCustomerForm [name=people]')?.dispatchEvent(new Event('input',{bubbles:true}));
@@ -70,7 +79,10 @@ async function openNavigationState(state){
  }
  switch(state.screen){
   case 'home':showScreen('home');break;
-  case 'chefs':showScreen('chefs');await loadChefs();break;
+  case 'chefs':
+   nearbyPoint=Array.isArray(state.searchPoint)&&state.searchPoint.length===2&&state.searchPoint.every(Number.isFinite)&&Math.abs(state.searchPoint[0])<=90&&Math.abs(state.searchPoint[1])<=180?state.searchPoint:null;
+   nearbyPointSource=nearbyPoint&&state.searchPointSource==='device'?'device':'map';
+   showScreen('chefs');await loadChefs();break;
   case 'orderModal':{
    await loadChefs();const c=chefsCache.find(c=>String(c.id)===String(state.chefId));
    if(!c){showScreen('chefs');showToast('هذا المطبخ غير متاح الآن.');return false;}
@@ -96,10 +108,10 @@ async function openNavigationState(state){
    if(previous&&previous.screen!=='locationPicker')await openNavigationState(previous);
    else if(state.locationOwner)await openKitchenSettings(chef);
    else {showScreen('chefs');await loadChefs();}
-   await pickLocation(Boolean(state.locationOwner),state.point,state.locationOwner?saveKitchenPoint:p=>{nearbyPoint=p;document.getElementById('nearArea').value='';renderNearby();});break;
+   await pickLocation(Boolean(state.locationOwner),state.point,state.locationOwner?saveKitchenPoint:p=>setNearbySearchPoint(p,'map'));break;
   }
  }
- if(document.querySelector('.screen.active')?.id===state.screen)restoreNavigationFields(state);return true;
+ if(document.querySelector('.screen.active')?.id===state.screen){restoreNavigationFields(state);if(state.screen==='chefs'&&state.mapOpen&&document.getElementById('nearMapWrap').hidden)await document.getElementById('showKitchenMap').onclick({currentTarget:document.getElementById('showKitchenMap')});}return true;
 }
 navigateBack=async function(){
  const previous=navigationTrail.pop()||{screen:'home'};
