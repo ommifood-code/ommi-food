@@ -1,0 +1,16 @@
+{
+  "name": "ommi-food",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node tests/run.cjs",
+    "check:architecture": "node scripts/check-runtime.cjs",
+    "build": "python3 scripts/build-static.py"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0",
+    "acorn-walk": "8.3.4",
+    "jsdom": "26.1.0"
+  },
+  "engines": {"node": ">=22"}
+}
