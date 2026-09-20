@@ -71,13 +71,14 @@ async function submitMealOrder(button){
  });
 }
 async function openCustomerMealOrder(token){
- const o=await mealRpc('customer_meal_order',{p_access_token:token}),screen=mealPanel('customerMealTracking','متابعة طلبي'),box=screen.querySelector('.meal-content');screen.querySelector('.back').onclick=openMyMealReceipts;
+ const o=await mealRpc('customer_meal_order',{p_access_token:token});if(o?.status==='cancelled')return leaveCancelledMealOrder(token);
+ const screen=mealPanel('customerMealTracking','متابعة طلبي'),box=screen.querySelector('.meal-content');screen.dataset.orderToken=token;screen.querySelector('.back').onclick=()=>openMyMealReceipts();
  box.innerHTML=`<article class="meal-card"><h2>${escapeHtml(mealStatus[o.status]||o.status)}</h2><p>${escapeHtml(o.dish_name)} — ${o.quantity} × طبق</p><p>الطبق الواحد يكفي ${peopleLabel(o.serves||"—")} · ثمنه ${mealMoney(o.unit_price)}</p><p>الإجمالي شامل التوصيل: ${mealMoney(o.total)}</p><p>الموعد المطلوب: ${mealDate(o.ready_at)}</p><p>مرجع الطلب: ${escapeHtml(o.order_ref)}</p>${o.status==='pending'?`<p>طلبك لم يُقبل بعد. سيوافق المطبخ على العدد والموعد المطلوبين أو يعتذر. يمكنك الاتصال به لتسريع الرد.</p>`:''}${o.status_reason?`<p>${escapeHtml(o.status_reason)}</p>`:''}${o.chef_phone?`<p>للتنسيق مع المطبخ: <a href="tel:${escapeHtml(o.chef_phone)}">${escapeHtml(o.chef_phone)}</a></p>`:''}${o.pickup_instructions?`<p>الاستلام: ${escapeHtml(o.pickup_instructions)}</p>`:''}</article><p>طلبك محفوظ في هذا المتصفح. احفظ رابطه للرجوع إليه من جهاز آخر، واحتفظ به لنفسك.</p><p>الدفع مباشرة مع المطبخ.</p>`;
  box.append(mealAction('نسخ رابط طلبي',async()=>{const url=new URL(location.href);url.hash='order='+token;try{await navigator.clipboard.writeText(url.href);showToast('تم نسخ رابط طلبك. احتفظ به لنفسك.');}catch{const input=document.createElement('input');input.className='field';input.readOnly=true;input.value=url.href;input.setAttribute('aria-label','رابط طلبي الخاص');box.append(input);input.focus();input.select();showToast('انسخ الرابط الظاهر للاحتفاظ بطلبك.');}}));
  if(o.chef_phone){const phone=String(o.chef_phone).replace(/^0/,'212').replace(/[^0-9]/g,'');if(phone){const contact=document.createElement('a');contact.className='primary';contact.target='_blank';contact.rel='noopener noreferrer';contact.textContent='مراسلة المطبخ عبر واتساب';contact.href='https://wa.me/'+phone+'?text='+encodeURIComponent(`مرحبًا، أرسلت طلبًا عبر Ommi Food. المرجع: ${o.order_ref}، ${o.dish_name}، ${o.quantity} × طبق يكفي ${peopleLabel(o.serves)}، الموعد المطلوب: ${mealDate(o.ready_at)}، الإجمالي: ${mealMoney(o.total)}. هل يمكن تأكيده داخل التطبيق؟`);box.append(contact);}}
  if(['rejected','expired'].includes(o.status))box.append(mealAction('البحث عن مطبخ آخر قريب',async()=>{showScreen('chefs');await loadChefs();}));
  box.append(mealAction('تحديث حالة الطلب',()=>openCustomerMealOrder(token)));
- if(o.status==='pending')box.append(mealAction('إلغاء الطلب قبل القبول',async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'cancel'});await openCustomerMealOrder(token);}));
+ if(o.status==='pending')box.append(mealAction('إلغاء الطلب قبل القبول',async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'cancel'});await leaveCancelledMealOrder(token);}));
  if(['accepted','preparing','ready'].includes(o.status))box.insertAdjacentHTML('beforeend','<p>لإلغاء طلب مقبول، تواصل مع المطبخ لتأكيد الإلغاء.</p>');
  if(o.status==='delivered'){box.insertAdjacentHTML('beforeend','<p class=warm-thanks>شكرًا لاختيارك مطبخًا منزليًا. طلبك يدعم عملًا من البيت.</p>');
  const f=document.createElement('form');f.className='meal-form';f.innerHTML=`<h2>كيف كانت التجربة؟</h2><label>هل استلمت الطلب؟<select name="received" class="field"><option value="true">نعم</option><option value="false">لا</option></select></label><label>هل ترغب في تكرار الطلب؟<select name="repeat" class="field"><option value="true">نعم</option><option value="false">لا</option></select></label><label>ملاحظتك<textarea name="feedback" class="field" maxlength="2000">${escapeHtml(o.feedback||'')}</textarea></label><button class="primary">حفظ رأيي</button>`;
@@ -88,8 +89,35 @@ async function openCustomerMealOrder(token){
  complaint.onsubmit=e=>{e.preventDefault();mealBusy(complaint.querySelector('button'),async()=>{await mealRpc('customer_meal_action',{p_access_token:token,p_action:'complaint',p_text:complaint.elements.message.value});markFormSaved(complaint);await openCustomerMealOrder(token);});};const help=document.createElement('details');help.innerHTML='<summary>لدي مشكلة — التواصل مع الإدارة</summary>';help.append(complaint);box.append(help);rememberMealReceipt(token,o.dish_name);showScreen(screen.id);history.replaceState(null,'',location.pathname+location.search+'#order='+token);mealTrackingToken=token;mealTrackingStatus=o.status;
 }
 function rememberMealReceipt(token,dishName){const rows=readMealReceipts();let row=rows.find(r=>r.token===token);if(!row){row={token,ref:'طلب محفوظ'};rows.unshift(row);}if(dishName)row.dish_name=dishName;localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(rows.slice(0,100)));}
-function openMyMealReceipts(){
- const screen=mealPanel('myMealReceipts','طلباتي'),box=screen.querySelector('.meal-content'),rows=readMealReceipts();box.innerHTML=rows.length?'<p>اختر طلبك لعرض تفاصيله والتواصل مع المطبخ.</p>':'<p>لا توجد طلبات محفوظة في هذا المتصفح. افتح المتصفح الذي أرسلت منه الطلب، أو استخدم رابط طلبك.</p>';
+async function loadCustomerReceipt(token){return mealRpc('customer_meal_order',{p_access_token:token});}
+function forgetMealReceipt(token){
+ localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(readMealReceipts().filter(r=>r.token!==token)));
+ if(localStorage.getItem('ommi_last_order_token')===token)localStorage.removeItem('ommi_last_order_token');
+ if(mealRequest?.token===token)mealRequest=null;
+ if(typeof forgetOrderNavigation==='function')forgetOrderNavigation(token);
+}
+async function leaveCancelledMealOrder(token){
+ forgetMealReceipt(token);
+ if(mealTrackingToken===token){mealTrackingToken=null;mealTrackingStatus=null;}
+ if(typeof requestTrackingToken!=='undefined'&&requestTrackingToken===token)requestTrackingToken=null;
+ if(typeof requestDraft!=='undefined')requestDraft=null;
+ selectedMealOffer=null;
+ const tracking=document.getElementById('customerMealTracking');
+ if(tracking?.dataset.orderToken===token)tracking.remove();
+ if(location.hash==='#order='+token)history.replaceState(null,'',location.pathname+location.search);
+ await openMyMealReceipts({homeWhenEmpty:true});
+}
+let mealReceiptsVersion=0;
+async function openMyMealReceipts({homeWhenEmpty=false}={}){
+ const version=++mealReceiptsVersion,screen=mealPanel('myMealReceipts','طلباتي'),box=screen.querySelector('.meal-content');
+ box.textContent='جاري تحميل طلباتك…';showScreen(screen.id);
+ const saved=readMealReceipts(),results=await Promise.allSettled(saved.map(r=>loadCustomerReceipt(r.token)));
+ results.forEach((result,i)=>{if(result.status==='fulfilled'&&result.value?.status==='cancelled')forgetMealReceipt(saved[i].token);});
+ if(version!==mealReceiptsVersion||!screen.classList.contains('active'))return;
+ const rows=readMealReceipts();
+ if(!rows.length&&(homeWhenEmpty||saved.length)){showScreen('home');return;}
+ box.innerHTML=rows.length?'<p>اختر طلبك لعرض تفاصيله والتواصل مع المطبخ.</p>':'<p>لا توجد طلبات محفوظة في هذا المتصفح. افتح المتصفح الذي أرسلت منه الطلب، أو استخدم رابط طلبك.</p>';
+ if(results.some(r=>r.status==='rejected')){box.insertAdjacentHTML('beforeend','<p>تعذر تحديث بعض الطلبات. حاول مجددًا.</p>');box.append(mealAction('إعادة المحاولة',()=>openMyMealReceipts({homeWhenEmpty})));}
  for(const r of rows)box.append(mealAction(r.dish_name||'عرض طلب محفوظ',()=>openCustomerMealOrder(r.token)));
  const details=document.createElement('details');details.innerHTML='<summary>لدي رابط طلب</summary>';const f=document.createElement('form');f.className='meal-form';f.innerHTML='<label>الصق رابط طلبك<input name="token" class="field" required autocomplete="off" placeholder="رابط الطلب الذي نسخته" dir="ltr"></label><button class="primary">فتح طلبي</button>';f.onsubmit=e=>{e.preventDefault();mealBusy(f.querySelector('button'),async()=>{const value=f.elements.token.value.trim();let token=value;if(!/^[0-9a-f]{64}$/.test(token)){let u;try{u=new URL(value);}catch{throw Error('الصق رابط الطلب كاملًا.');}if(u.origin!==location.origin)throw Error('استخدم رابط طلب من هذا الموقع.');token=u.hash.replace(/^#order=/,'');}if(!/^[0-9a-f]{64}$/.test(token))throw Error('رابط الطلب غير صحيح.');markFormSaved(f);await openCustomerMealOrder(token);});};details.append(f);box.append(details);showScreen(screen.id);
 }
@@ -115,7 +143,7 @@ document.getElementById('orderBack').onclick=()=>showScreen('chefs');
 
 // Only a fragment carries the private order capability; it is never sent in HTTP URLs.
 let mealTrackingToken=null,mealTrackingStatus=null,mealPollBusy=false,mealLastPending=null,mealLastSession=null;
-async function followOrderLink(){const m=location.hash.match(/^#order=([0-9a-f]{64})$/);if(!m)return;try{await openCustomerMealOrder(m[1]);const rows=readMealReceipts();if(!rows.some(r=>r.token===m[1])){rows.unshift({token:m[1],ref:'طلب محفوظ'});localStorage.setItem(MEAL_RECEIPTS_KEY,JSON.stringify(rows.slice(0,100)));}}catch(err){showToast(err.message);}}
+async function followOrderLink(){const m=location.hash.match(/^#order=([0-9a-f]{64})$/);if(!m)return;try{await openCustomerMealOrder(m[1]);}catch(err){showToast(err.message);}}
 window.addEventListener('hashchange',followOrderLink);window.addEventListener('DOMContentLoaded',followOrderLink,{once:true});
 setInterval(async()=>{
  if(document.visibilityState==='hidden'||mealPollBusy)return;mealPollBusy=true;
@@ -128,7 +156,7 @@ setInterval(async()=>{
    if(ids.some(id=>!mealLastPending?.includes(id)))showToast(`لديك ${ids.length} طلب بانتظار القبول`);mealLastPending=ids;
   }
   if(mealTrackingToken&&document.querySelector('#customerMealTracking.active')){
-   const o=await mealRpc('customer_meal_order',{p_access_token:mealTrackingToken});if(o.status!==mealTrackingStatus){let note=document.getElementById('mealStatusChanged');if(!note){note=mealAction('تغيرت حالة طلبك — عرض التفاصيل',()=>openCustomerMealOrder(mealTrackingToken));note.id='mealStatusChanged';document.querySelector('#customerMealTracking .meal-content').prepend(note);}note.textContent=(mealStatus[o.status]||o.status)+' — عرض التفاصيل';showToast(mealStatus[o.status]||o.status);mealTrackingStatus=o.status;}
+   const token=mealTrackingToken,o=await mealRpc('customer_meal_order',{p_access_token:token});if(token!==mealTrackingToken)return;if(o.status==='cancelled'){await leaveCancelledMealOrder(token);return;}if(o.status!==mealTrackingStatus){let note=document.getElementById('mealStatusChanged');if(!note){note=mealAction('تغيرت حالة طلبك — عرض التفاصيل',()=>openCustomerMealOrder(mealTrackingToken));note.id='mealStatusChanged';document.querySelector('#customerMealTracking .meal-content').prepend(note);}note.textContent=(mealStatus[o.status]||o.status)+' — عرض التفاصيل';showToast(mealStatus[o.status]||o.status);mealTrackingStatus=o.status;}
   }
  }catch{/* Keep the current form and retry next time; never discard typed notes. */}finally{mealPollBusy=false;}
 },20000);

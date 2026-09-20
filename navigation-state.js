@@ -26,6 +26,12 @@ function saveNavigationState(){
  navigationCurrent=navigationSnapshot();
  try{sessionStorage.setItem(OMMI_NAV_STATE_KEY,JSON.stringify({current:navigationCurrent,trail:navigationTrail.slice(-20)}));}catch{}
 }
+function forgetOrderNavigation(token){
+ const cancelled=state=>state?.screen==='customerMealTracking'&&state.token===token;
+ navigationTrail=navigationTrail.filter(state=>!cancelled(state));
+ if(cancelled(navigationCurrent))navigationCurrent=null;
+ try{const saved=JSON.parse(sessionStorage.getItem(OMMI_NAV_STATE_KEY)||'null');if(saved){if(cancelled(saved.current))saved.current={screen:'home'};saved.trail=(saved.trail||[]).filter(state=>!cancelled(state));sessionStorage.setItem(OMMI_NAV_STATE_KEY,JSON.stringify(saved));}}catch{}
+}
 const navigationStateShowScreen=showScreen;
 showScreen=function(id){
  if(!document.getElementById(id))return;
@@ -70,7 +76,7 @@ async function openNavigationState(state){
    if(!c){showScreen('chefs');showToast('هذا المطبخ غير متاح الآن.');return false;}
    await openMealOrdering(c);break;
   }
-  case 'myMealReceipts':openMyMealReceipts();break;
+  case 'myMealReceipts':await openMyMealReceipts();break;
   case 'customerMealTracking':
    if(!/^[0-9a-f]{64}$/.test(state.token||''))return false;
    await openCustomerMealOrder(state.token);break;
@@ -93,7 +99,7 @@ async function openNavigationState(state){
    await pickLocation(Boolean(state.locationOwner),state.point,state.locationOwner?saveKitchenPoint:p=>{nearbyPoint=p;document.getElementById('nearArea').value='';renderNearby();});break;
   }
  }
- restoreNavigationFields(state);return true;
+ if(document.querySelector('.screen.active')?.id===state.screen)restoreNavigationFields(state);return true;
 }
 navigateBack=async function(){
  const previous=navigationTrail.pop()||{screen:'home'};
